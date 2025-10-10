@@ -7,7 +7,7 @@ let scheduleData = JSON.parse(localStorage.getItem('scheduleData')) || [
 
 // كلمة مرور الأدمن (غيرها!)
 const adminPassword = 'Masterpiece1%';
-const adminUser = 'Khaled';
+
 
 // تسجيل الدخول للأدمن
 document.getElementById('adminLoginForm').addEventListener('submit', function(e) {
