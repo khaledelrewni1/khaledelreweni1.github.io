@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جدول محاضرات الدفعة</title>
+    <link rel="stylesheet" href="style.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+</head>
+<body>
+    <!-- نموذج تسجيل الدخول -->
+    <div id="loginForm" class="modal">
+        <div class="modal-content">
+            <h2>تسجيل الدخول للجدول</h2>
+            <form id="login">
+                <input type="text" id="username" placeholder="اسمك أو رقم الدفعة" required>
+                <input type="password" id="password" placeholder="كلمة المرور (كود الدفعة)" required>
+                <button type="submit">دخول</button>
+            </form>
+            <p id="errorMsg" style="color: red;"></p>
+        </div>
+    </div>
+
+    <!-- الصفحة الرئيسية بعد الدخول -->
+    <div id="mainContent" style="display: none;">
+        <header>
+            <h1>جدول محاضرات الدفعة - محدث أسبوعيًا</h1>
+            <p>آخر تحديث: <span id="lastUpdate">اليوم</span></p>
+        </header>
+
+        <!-- الجدول الثابت -->
+        <section id="scheduleTable">
+            <h2>جدول المحاضرات</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>المادة</th>
+                        <th>الدكتور/ة</th>
+                        <th>المكان</th>
+                        <th>اليوم</th>
+                        <th>الوقت</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- البيانات هتتحمل هنا عبر JS -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- التقويم التفاعلي -->
+        <section id="calendarSection">
+            <h2>التقويم التفاعلي</h2>
+            <div id="calendar"></div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم - تعديل الجدول</title>
+    <link rel="stylesheet" href="style.css">
+    <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
+</head>
+<body>
+    <!-- نموذج تسجيل الدخول للأدمن -->
+    <div id="adminLogin" class="modal">
+        <div class="modal-content">
+            <h2>دخول الأدمن (للتعديل)</h2>
+            <form id="adminLoginForm">
+                <input type="text" id="adminUser" placeholder="اسم المستخدم (admin)" required>
+                <input type="password" id="adminPass" placeholder="كلمة المرور" required>
+                <button type="submit">دخول</button>
+            </form>
+            <p id="adminError" style="color: red;"></p>
+        </div>
+    </div>
+
+    <!-- لوحة التحكم -->
+    <div id="adminContent" style="display: none;">
+        <header>
+            <h1>تعديل جدول المحاضرات</h1>
+            <button onclick="saveAndUpdate()">حفظ التغييرات وتحديث</button>
+            <p>آخر حفظ: <span id="adminLastUpdate">اليوم</span></p>
+        </header>
+
+        <!-- نموذج تعديل الجدول -->
+        <section id="editSchedule">
+            <h2>تعديل الجدول</h2>
+            <table id="editTable">
+                <thead>
+                    <tr>
+                        <th>المادة</th>
+                        <th>الدكتور/ة</th>
+                        <th>المكان</th>
+                        <th>اليوم (عدل هنا)</th>
+                        <th>الوقت (عدل هنا)</th>
+                        <th>ملاحظات</th>
+                    </tr>
+                </thead>
+                <tbody id="editTableBody">
+                    <!-- البيانات هتتحمل هنا -->
+                </tbody>
+            </table>
+        </section>
+
+        <!-- تعديل التقويم -->
+        <section id="editCalendar">
+            <h2>إدارة التقويم</h2>
+            <div id="adminCalendar"></div>
+            <button onclick="addEventToCalendar()">إضافة حدث جديد</button>
+        </section>
+    </div>
+
+    <script src="admin-script.js"></script>  <!-- ملف JS منفصل للأدمن -->
+</body>
+</html>
