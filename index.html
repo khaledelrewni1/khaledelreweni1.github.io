@@ -1,104 +1,380 @@
-<!doctype html>
-<html lang="auto">
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>📘 جدول المحاضرات — Index</title>
-<style>
-:root{
-  --accent1:#60a5fa; --accent2:#7c3aed;
-  --bg-grad: linear-gradient(90deg,var(--accent1),var(--accent2));
-  --card:#ffffff; --text:#071127; --muted:#475569;
-  --cell-border: rgba(2,6,23,0.06);
-}
-html,body{height:100%}
-body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var(--text);min-height:100vh}
-.container{max-width:1400px;margin:0 auto;padding:18px}
-.header-card{background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;color:white;display:flex;flex-direction:column;align-items:center;gap:10px}
-.header-top{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px}
-.brand{display:flex;align-items:center;gap:12px}
-.logo{width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:28px}
-.title{font-size:20px;font-weight:900}
-.controls{display:flex;gap:8px;align-items:center}
-.small-btn{background:transparent;border:1px solid rgba(255,255,255,0.18);color:white;padding:6px 10px;border-radius:8px;cursor:pointer}
-.countdown{font-size:18px;font-weight:800;color:#fff;background:rgba(0,0,0,0.20);padding:10px 18px;border-radius:12px;display:inline-block}
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📘 جدول المحاضرات</title>
+  <style>
+    :root {
+      --accent1: #60a5fa;
+      --accent2: #7c3aed;
+      --bg: linear-gradient(90deg, var(--accent1), var(--accent2));
+    }
 
-/* layout */
-.main-row{display:flex;gap:16px;margin-top:16px;align-items:flex-start}
-.left-col{flex:1}
-.right-col{width:380px}
+    body {
+      margin: 0;
+      font-family: 'Cairo', sans-serif;
+      background: var(--bg);
+      color: #fff;
+      min-height: 100vh;
+    }
 
-/* card & table styles */
-.card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,0.12);color:var(--text)}
-.table-wrap{overflow:auto;margin-top:12px}
-.table{width:100%;border-collapse:collapse;background:var(--card);border-radius:8px;overflow:hidden;table-layout:fixed;min-width:1100px}
-.table th, .table td{border:1px solid var(--cell-border);padding:8px;text-align:center;font-size:13px;word-wrap:break-word;overflow-wrap:break-word;min-width:80px}
-.table th{background:rgba(0,0,0,0.03);font-weight:800}
-.slot{padding:6px;border-radius:6px}
-.slot .meta{font-size:12px;color:var(--muted);margin-top:6px}
-.empty{opacity:0.45}
-.current{outline:3px solid rgba(124,58,237,0.18);box-shadow:0 6px 18px rgba(124,58,237,0.08)}
+    .container {
+      max-width: 1200px;
+      margin: auto;
+      padding: 20px;
+    }
 
-/* legend */
-.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
-.legend-item{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.06);font-size:13px;color:white}
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
 
-/* admin form */
-.input, textarea, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-top:6px}
-.row{display:flex;gap:8px}
-.col{flex:1}
-.kv{font-size:13px;color:var(--muted)}
-.icon-btn{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px}
-.icon-btn.edit{background:rgba(124,58,237,0.08)}
-.icon-btn.del{background:rgba(239,68,68,0.08)}
+    #lastUpdate {
+      text-align: center;
+      font-size: 14px;
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
 
-/* inline editor styling */
-.inline-form{display:flex;flex-direction:column;gap:8px}
-.inline-form .row{align-items:flex-end}
+    /* تبويبات */
+    .tabs {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
 
-/* restore button */
-.restore-btn{margin-top:10px;background:#10b981;color:white;padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
 
-/* responsive */
-@media (max-width:1000px){
-  .main-row{flex-direction:column}
-  .right-col{width:100%}
-  .table{min-width:900px}
-}
+    .tab-btn.active {
+      background: #fff;
+      color: #4b0082;
+    }
 
-/* print landscape */
-@media print{
-  @page { size: landscape; }
-  body{background:white}
-}
-</style>
+    .tab-content {
+      display: none;
+      background: #fff;
+      color: #333;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    /* الجدول */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+
+    th {
+      background: #f3f4f6;
+      color: #333;
+    }
+
+    /* العداد */
+    #countdown {
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 10px 15px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    /* تبويب الدكاترة */
+    .doctor-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .doctor-list li {
+      background: rgba(99, 102, 241, 0.1);
+      margin: 8px 0;
+      padding: 10px;
+      border-radius: 8px;
+    }
+
+    /* زر الأدمن */
+    #adminPanel {
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    #adminPanel input, #adminPanel button {
+      margin: 5px;
+      padding: 8px;
+    }
+
+    #adminLogin {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .hidden {
+      display: none;
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-  <div class="header-card" role="banner">
-    <div class="header-top">
-      <div class="brand" aria-hidden="false">
-        <div class="logo">📘</div>
-        <div>
-          <div class="title">📘 جدول المحاضرات — Index</div>
-          <div class="kv" style="color:var(--muted)">التعديلات تُحفظ تلقائياً في المتصفح</div>
-        </div>
-      </div>
-      <div class="controls" role="toolbar" aria-label="أدوات">
-        <button id="exportBtn" class="small-btn" title="تصدير JSON">تصدير</button>
-        <button id="importBtn" class="small-btn" title="استيراد JSON">استيراد</button>
-        <button id="printBtn" class="small-btn" title="طباعة">طباعة</button>
-      </div>
+  <div class="container">
+    <h1>📘 جدول المحاضرات</h1>
+    <div id="lastUpdate">🗓️ آخر تحديث للجدول: ...</div>
+    <div id="countdown">جاري حساب العدّاد...</div>
+
+    <!-- التبويبات -->
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="schedule">📅 الجدول الأسبوعي</button>
+      <button class="tab-btn" data-tab="today">🗓️ اليوم</button>
+      <button class="tab-btn" data-tab="doctors">👨‍🏫 الدكاترة</button>
     </div>
 
-    <div style="margin-top:6px">
-      <div id="countdown" class="countdown" role="status" aria-live="polite">جاري حساب المحاضرة القادمة...</div>
+    <!-- محتوى الجدول الأسبوعي -->
+    <div id="schedule" class="tab-content active">
+      <table id="timetable"></table>
+    </div>
+
+    <!-- محتوى اليوم -->
+    <div id="today" class="tab-content">
+      <ul id="todayList"></ul>
+    </div>
+
+    <!-- محتوى الدكاترة -->
+    <div id="doctors" class="tab-content">
+      <ul id="doctorList" class="doctor-list"></ul>
+    </div>
+
+    <!-- تسجيل دخول الأدمن -->
+    <div id="adminLogin">
+      <input type="text" id="adminName" placeholder="اسم الأدمن">
+      <button id="loginBtn">دخول</button>
+    </div>
+
+    <!-- لوحة تحكم الأدمن -->
+    <div id="adminPanel" class="hidden">
+      <h3>لوحة التحكم</h3>
+      <div>
+        <input id="lectureTitle" placeholder="اسم المادة">
+        <input id="lectureDay" placeholder="اليوم">
+        <input id="lectureTime" placeholder="الساعة (8 - 10)">
+        <button id="addLecture">إضافة محاضرة</button>
+      </div>
+
+      <div style="margin-top:15px;">
+        <input id="doctorName" placeholder="اسم الدكتور">
+        <button id="addDoctor">إضافة دكتور</button>
+      </div>
     </div>
   </div>
+<script>
+    // ======================
+    // بيانات مبدئية للمحاضرات
+    // ======================
+    const DAYS = ["الجمعة", "الخميس", "الأربعاء", "الثلاثاء", "الاثنين", "الأحد", "السبت"];
+    const LECTURES = [
+      { title: "كيمياء حيوية", day: "الأحد", time: "9 - 11 ص" },
+      { title: "تشريح", day: "الاثنين", time: "10 - 12 ص" },
+      { title: "ميكروبيولوجي", day: "الثلاثاء", time: "8 - 10 ص" },
+      { title: "فسيولوجي", day: "الأربعاء", time: "12 - 2 م" },
+      { title: "إحصاء", day: "الخميس", time: "9 - 10 ص" },
+    ];
 
-  <div class="main-row">
+    const DOCTORS = ["د. خالد", "د. أحمد", "د. منى"];
 
-    <div class="left-col" role="main">
+    let isAdmin = false;
+
+    // ======================
+    // تبويبات
+    // ======================
+    const tabBtns = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
+
+    tabBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        tabBtns.forEach(b => b.classList.remove("active"));
+        tabContents.forEach(tc => tc.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(btn.dataset.tab).classList.add("active");
+      });
+    });
+
+    // ======================
+    // إنشاء الجدول الأسبوعي
+    // ======================
+    function renderTable() {
+      const table = document.getElementById("timetable");
+      let html = "<thead><tr><th>اليوم</th><th>المحاضرات</th></tr></thead><tbody>";
+
+      DAYS.forEach(day => {
+        const lectures = LECTURES.filter(l => l.day === day);
+        let row = `<tr><th>${day}</th><td>`;
+        if (lectures.length > 0) {
+          lectures.forEach(l => {
+            row += `<div><b>${l.title}</b> (${l.time})</div>`;
+          });
+        } else {
+          row += "<span style='opacity:0.6'>لا توجد محاضرات</span>";
+        }
+        row += "</td></tr>";
+        html += row;
+      });
+
+      html += "</tbody>";
+      table.innerHTML = html;
+    }
+
+    // ======================
+    // عرض محاضرات اليوم
+    // ======================
+    function renderToday() {
+      const todayList = document.getElementById("todayList");
+      todayList.innerHTML = "";
+      const todayName = new Date().toLocaleDateString("ar-EG", { weekday: "long" });
+      const todayLectures = LECTURES.filter(l => l.day === todayName);
+
+      if (todayLectures.length === 0) {
+        todayList.innerHTML = "<li>لا توجد محاضرات اليوم</li>";
+      } else {
+        todayLectures.forEach(l => {
+          const li = document.createElement("li");
+          li.textContent = `${l.title} (${l.time})`;
+          todayList.appendChild(li);
+        });
+      }
+    }
+
+    // ======================
+    // قائمة الدكاترة
+    // ======================
+    function renderDoctors() {
+      const doctorList = document.getElementById("doctorList");
+      doctorList.innerHTML = "";
+      DOCTORS.forEach(d => {
+        const li = document.createElement("li");
+        li.textContent = d;
+        if (isAdmin) {
+          const del = document.createElement("button");
+          del.textContent = "🗑️";
+          del.onclick = () => {
+            const i = DOCTORS.indexOf(d);
+            DOCTORS.splice(i, 1);
+            renderDoctors();
+          };
+          li.appendChild(del);
+        }
+        doctorList.appendChild(li);
+      });
+    }
+
+    // ======================
+    // نظام الأدمن
+    // ======================
+    document.getElementById("loginBtn").addEventListener("click", () => {
+      const name = document.getElementById("adminName").value.trim();
+      if (name === "khaled181") {
+        isAdmin = true;
+        document.getElementById("adminPanel").classList.remove("hidden");
+        document.getElementById("adminLogin").classList.add("hidden");
+        renderDoctors();
+      } else {
+        alert("❌ اسم الأدمن غير صحيح");
+      }
+    });
+
+    // إضافة محاضرة جديدة
+    document.getElementById("addLecture").addEventListener("click", () => {
+      const title = document.getElementById("lectureTitle").value.trim();
+      const day = document.getElementById("lectureDay").value.trim();
+      const time = document.getElementById("lectureTime").value.trim();
+      if (title && day && time) {
+        LECTURES.push({ title, day, time });
+        renderTable();
+        renderToday();
+      }
+    });
+
+    // إضافة دكتور جديد
+    document.getElementById("addDoctor").addEventListener("click", () => {
+      const name = document.getElementById("doctorName").value.trim();
+      if (name) {
+        DOCTORS.push(name);
+        renderDoctors();
+      }
+    });
+
+    // ======================
+    // آخر تحديث
+    // ======================
+    function updateLastModified() {
+      const now = new Date();
+      const text = now.toLocaleString("ar-EG", { dateStyle: "full", timeStyle: "short" });
+      document.getElementById("lastUpdate").textContent = "🗓️ آخر تحديث للجدول: " + text;
+    }
+
+    // ======================
+    // العداد حتى بداية المحاضرة
+    // ======================
+    function startCountdown() {
+      const el = document.getElementById("countdown");
+      function update() {
+        // في النسخة الحالية عداد تجريبي فقط
+        const nextLecture = LECTURES[0];
+        if (!nextLecture) {
+          el.textContent = "🎓 لا توجد محاضرات قادمة";
+          return;
+        }
+        const now = new Date();
+        const target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0);
+        const diff = target - now;
+        if (diff <= 0) {
+          el.textContent = "🕒 المحاضرة بدأت الآن: " + nextLecture.title;
+          return;
+        }
+        const hrs = Math.floor(diff / 3600000);
+        const mins = Math.floor((diff % 3600000) / 60000);
+        const secs = Math.floor((diff % 60000) / 1000);
+        el.textContent = `⏳ المحاضرة القادمة: ${nextLecture.title} — بعد ${hrs} س ${mins} د ${secs} ث`;
+      }
+      update();
+      setInterval(update, 1000);
+    }
+
+    // ======================
+    // تشغيل الكل
+    // ======================
+    renderTable();
+    renderToday();
+    renderDoctors();
+    updateLastModified();
+    startCountdown();
+  </script>
+</body>
+</html>    <div class="left-col" role="main">
       <section class="card" aria-labelledby="weekly-heading">
         <h3 id="weekly-heading">الجدول الأسبوعي</h3>
         <div class="table-wrap" role="table" aria-label="جدول المحاضرات">
