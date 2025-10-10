@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="auto">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>📘 جدول المحاضرات — Index</title>
+<style>
+:root{
+  --accent1:#60a5fa; --accent2:#7c3aed;
+  --bg-grad: linear-gradient(90deg,var(--accent1),var(--accent2));
+  --card:#ffffff; --text:#071127; --muted:#475569;
+  --cell-border: rgba(2,6,23,0.06);
+}
+html,body{height:100%}
+body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var(--text);min-height:100vh}
+.container{max-width:1400px;margin:0 auto;padding:18px}
+.header-card{background:rgba(255,255,255,0.04);border-radius:12px;padding:14px;color:white;display:flex;flex-direction:column;align-items:center;gap:10px}
+.header-top{width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:56px;height:56px;border-radius:10px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:28px}
+.title{font-size:20px;font-weight:900}
+.controls{display:flex;gap:8px;align-items:center}
+.small-btn{background:transparent;border:1px solid rgba(255,255,255,0.18);color:white;padding:6px 10px;border-radius:8px;cursor:pointer}
+.countdown{font-size:18px;font-weight:800;color:#fff;background:rgba(0,0,0,0.20);padding:10px 18px;border-radius:12px;display:inline-block}
+
+/* layout */
+.main-row{display:flex;gap:16px;margin-top:16px;align-items:flex-start}
+.left-col{flex:1}
+.right-col{width:380px}
+
+/* card & table styles */
+.card{background:var(--card);border-radius:12px;padding:12px;box-shadow:0 8px 30px rgba(2,6,23,0.12);color:var(--text)}
+.table-wrap{overflow:auto;margin-top:12px}
+.table{width:100%;border-collapse:collapse;background:var(--card);border-radius:8px;overflow:hidden;table-layout:fixed;min-width:1100px}
+.table th, .table td{border:1px solid var(--cell-border);padding:8px;text-align:center;font-size:13px;word-wrap:break-word;overflow-wrap:break-word;min-width:80px}
+.table th{background:rgba(0,0,0,0.03);font-weight:800}
+.slot{padding:6px;border-radius:6px}
+.slot .meta{font-size:12px;color:var(--muted);margin-top:6px}
+.empty{opacity:0.45}
+.current{outline:3px solid rgba(124,58,237,0.18);box-shadow:0 6px 18px rgba(124,58,237,0.08)}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.legend-item{padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.06);font-size:13px;color:white}
+
+/* admin form */
+.input, textarea, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);margin-top:6px}
+.row{display:flex;gap:8px}
+.col{flex:1}
+.kv{font-size:13px;color:var(--muted)}
+.icon-btn{background:transparent;border:none;cursor:pointer;padding:6px;border-radius:6px}
+.icon-btn.edit{background:rgba(124,58,237,0.08)}
+.icon-btn.del{background:rgba(239,68,68,0.08)}
+
+/* inline editor styling */
+.inline-form{display:flex;flex-direction:column;gap:8px}
+.inline-form .row{align-items:flex-end}
+
+/* restore button */
+.restore-btn{margin-top:10px;background:#10b981;color:white;padding:8px 10px;border-radius:8px;border:none;cursor:pointer}
+
+/* responsive */
+@media (max-width:1000px){
+  .main-row{flex-direction:column}
+  .right-col{width:100%}
+  .table{min-width:900px}
+}
+
+/* print landscape */
+@media print{
+  @page { size: landscape; }
+  body{background:white}
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-card" role="banner">
+    <div class="header-top">
+      <div class="brand" aria-hidden="false">
+        <div class="logo">📘</div>
+        <div>
+          <div class="title">📘 جدول المحاضرات — Index</div>
+          <div class="kv" style="color:var(--muted)">التعديلات تُحفظ تلقائياً في المتصفح</div>
+        </div>
+      </div>
+      <div class="controls" role="toolbar" aria-label="أدوات">
+        <button id="exportBtn" class="small-btn" title="تصدير JSON">تصدير</button>
+        <button id="importBtn" class="small-btn" title="استيراد JSON">استيراد</button>
+        <button id="printBtn" class="small-btn" title="طباعة">طباعة</button>
+      </div>
+    </div>
+
+    <div style="margin-top:6px">
+      <div id="countdown" class="countdown" role="status" aria-live="polite">جاري حساب المحاضرة القادمة...</div>
+    </div>
+  </div>
+
+  <div class="main-row">
+
+    <div class="left-col" role="main">
+      <section class="card" aria-labelledby="weekly-heading">
+        <h3 id="weekly-heading">الجدول الأسبوعي</h3>
+        <div class="table-wrap" role="table" aria-label="جدول المحاضرات">
+          <table class="table" id="timetable"></table>
+        </div>
+        <div id="legend" class="legend" aria-hidden="false"></div>
+      </section>
+    </div>
+
+    <div class="right-col" role="complementary">
+      <section class="card" aria-labelledby="admin-heading">
+        <h3 id="admin-heading">إدارة المحاضرات</h3>
+
+        <form id="addForm" autocomplete="off">
+          <div class="row">
+            <div class="col">
+              <label class="kv">اليوم</label>
+              <select id="fDay" class="input" aria-label="اليوم"></select>
+            </div>
+            <div class="col">
+              <label class="kv">المادة</label>
+              <input id="fTitle" class="input" placeholder="اسم المادة" required aria-label="المادة" />
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:8px">
+            <div class="col">
+              <label class="kv">بداية (ساعة)</label>
+              <select id="fStartH" class="input" aria-label="بداية الساعة"></select>
+            </div>
+            <div class="col">
+              <label class="kv">نهاية (ساعة)</label>
+              <select id="fEndH" class="input" aria-label="نهاية الساعة"></select>
+            </div>
+          </div>
+
+          <div style="margin-top:8px">
+            <label class="kv">المكان (اختياري)</label>
+            <input id="fLocation" class="input" placeholder="قاعة أو نص" aria-label="المكان" />
+          </div>
+
+          <div style="margin-top:8px;display:flex;gap:8px;justify-content:flex-end">
+            <button type="submit" class="small-btn" style="background:white;color:#3730a3;border-radius:8px;padding:8px 12px">أضف</button>
+            <button type="button" id="clearBtn" class="small-btn" style="background:#f97316;color:white;border-radius:8px;padding:8px 12px">مسح الكل</button>
+          </div>
+        </form>
+
+        <div id="list" style="margin-top:12px" aria-live="polite"></div>
+
+        <button id="restoreDefault" class="restore-btn" title="استرجاع البيانات الافتراضية">استرجاع البيانات الافتراضية</button>
+      </section>
+    </div>
+
+  </div>
+
+  <div style="height:18px"></div>
+  <div style="text-align:center;color:white">تصميم وبرمجة: Khaled El-Reweni 💻</div>
+</div>
+
+<script>
+/* =====================
+   Index.html - Full file
+   Features:
+   - Layout: landscape-friendly, columns=time, rows=days
+   - Countdown (title + remaining time)
+   - Add / Delete / Edit (inline) lectures
+   - Save to localStorage automatically
+   - Import / Export / Print
+   - Restore default demo data
+   - Direction auto by browser language (rtl for 'ar*')
+   ===================== */
+
+/* Set language and direction depending on browser */
+(function setLangDir(){
+  try{
+    const navLang = (navigator.language || navigator.userLanguage || 'ar').toLowerCase();
+    if(navLang.startsWith('ar')){
+      document.documentElement.lang = 'ar';
+      document.documentElement.dir = 'rtl';
+    } else {
+      document.documentElement.lang = navLang;
+      document.documentElement.dir = 'ltr';
+    }
+  }catch(e){ /* ignore */ }
+})();
+
+/* Config & storage key */
+const STORAGE_KEY = 'jadwal_index_v1';
+const DAYS = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
+const HOURS = Array.from({length:15},(_,i)=>8+i); // 8..22
+
+/* Utilities */
+function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
+function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {lectures:[]} }catch(e){ return {lectures:[]} } }
+function saveData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+
+/* initial data store */
+let DATA = loadData();
+
+/* Populate selectors */
+function populateSelectors(){
+  const fDay = document.getElementById('fDay');
+  fDay.innerHTML = DAYS.map(d=>`<option value="${d}">${d}</option>`).join('');
+  document.getElementById('fStartH').innerHTML = HOURS.map(h=>`<option value="${h}">${hourLabel(h)}</option>`).join('');
+  document.getElementById('fEndH').innerHTML = HOURS.map(h=>`<option value="${h}">${hourLabel(h)}</option>`).join('');
+}
+
+/* Time formatting */
+function toPeriod(h){ return h>=12 ? 'م' : 'ص'; }
+function hourLabel(h){ return (h%12===0?12:h%12) + ' ' + toPeriod(h); }
+function headerRange(h){ const next=h+1; return `${(h%12===0?12:h%12)} - ${(next%12===0?12:next%12)} ${toPeriod(h)}`; }
+
+/* Escape HTML */
+function escapeHtml(s){ if(!s && s !== 0) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+/* Format lecture range */
+function formatLectureRange(lec){
+  if((lec.startMin||0)===0 && (lec.endMin||0)===0){
+    const p = lec.startHour>=12 ? 'م' : 'ص';
+    return `${(lec.startHour%12===0?12:lec.startHour%12)} - ${(lec.endHour%12===0?12:lec.endHour%12)} ${p}`;
+  }
+  return `${lec.startHour}:${String(lec.startMin||0).padStart(2,'0')} — ${lec.endHour}:${String(lec.endMin||0).padStart(2,'0')}`;
+}
+
+/* Render table */
+function renderTable(){
+  const table = document.getElementById('timetable');
+  let html = '<thead><tr><th>اليوم</th>';
+  HOURS.forEach(h => html += `<th>${headerRange(h)}</th>`);
+  html += '</tr></thead><tbody>';
+
+  const map = {};
+  (DATA.lectures||[]).forEach(l=>{ if(!map[l.day]) map[l.day]=[]; map[l.day].push(l); });
+
+  DAYS.forEach(day=>{
+    html += `<tr><th>${day}</th>`;
+    HOURS.forEach(h=>{
+      const lectures = (map[day]||[]).filter(l => (l.startHour + (l.startMin||0)/60) <= h && h < (l.endHour + (l.endMin||0)/60));
+      if(lectures.length === 0){
+        html += '<td class="empty"></td>';
+      } else {
+        let cell = '<td>';
+        lectures.forEach(lec=>{
+          cell += `<div class="slot" data-id="${lec.id}" style="background:rgba(96,165,250,0.12);margin-bottom:6px;padding:8px;border-radius:8px;text-align:center">`;
+          cell += `<div style="font-weight:800;color:#3730a3">${escapeHtml(lec.title)}</div>`;
+          if(lec.location) cell += `<div class="kv">${escapeHtml(lec.location)}</div>`;
+          cell += `<div class="kv">${formatLectureRange(lec)}</div>`;
+          cell += `</div>`;
+        });
+        cell += '</td>';
+        html += cell;
+      }
+    });
+    html += `</tr>`;
+  });
+
+  html += '</tbody>';
+  table.innerHTML = html;
+  renderLegend();
+  attachSlotClickHandlers();
+}
+
+/* Legend */
+function renderLegend(){
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  const titles = Array.from(new Set((DATA.lectures||[]).map(l=>l.title).filter(Boolean)));
+  titles.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = 'legend-item';
+    el.textContent = t;
+    legend.appendChild(el);
+  });
+}
+
+/* Render admin list */
+function renderList(){
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+  if(!DATA.lectures || DATA.lectures.length === 0){
+    list.innerHTML = '<div class="kv">لا توجد محاضرات مسجلة بعد</div>';
+    return;
+  }
+
+  DATA.lectures.sort((a,b)=> {
+    const da = DAYS.indexOf(a.day), db = DAYS.indexOf(b.day);
+    if(da !== db) return da - db;
+    return a.startHour - b.startHour;
+  });
+
+  DATA.lectures.forEach(lec=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.marginBottom = '8px';
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="flex:1">
+          <div style="font-weight:800">${escapeHtml(lec.title)}</div>
+          <div class="kv">${escapeHtml(lec.day)} • ${formatLectureRange(lec)} ${lec.location?('• '+escapeHtml(lec.location)) : ''}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="icon-btn edit" data-id="${lec.id}" title="تعديل">✏️</button>
+          <button class="icon-btn del" data-id="${lec.id}" title="حذف">🗑️</button>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+
+  list.querySelectorAll('.icon-btn.del').forEach(btn=> btn.addEventListener('click', ()=> {
+    const id = btn.getAttribute('data-id');
+    if(confirm('حذف المحاضرة؟')){
+      DATA.lectures = DATA.lectures.filter(x=> x.id !== id);
+      saveData(DATA);
+      renderAll();
+    }
+  }));
+
+  list.querySelectorAll('.icon-btn.edit').forEach(btn=> btn.addEventListener('click', ()=> {
+    const id = btn.getAttribute('data-id');
+    openInlineEditor(id, btn);
+  }));
+}
+
+/* Inline editor */
+function openInlineEditor(id, btnEl){
+  const lec = DATA.lectures.find(x=> x.id === id);
+  if(!lec) return;
+  const card = btnEl.closest('.card');
+  card.innerHTML = '';
+  const form = document.createElement('form');
+  form.className = 'inline-form';
+  form.innerHTML = `
+    <div class="row">
+      <div class="col">
+        <label class="kv">المادة</label>
+        <input class="input" name="title" value="${escapeHtml(lec.title)}" required />
+      </div>
+      <div class="col">
+        <label class="kv">اليوم</label>
+        <select class="input" name="day">${DAYS.map(d=>`<option value="${d}" ${d===lec.day?'selected':''}>${d}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="col">
+        <label class="kv">بداية (ساعة)</label>
+        <select class="input" name="startHour">${HOURS.map(h=>`<option value="${h}" ${h===lec.startHour?'selected':''}>${hourLabel(h)}</option>`).join('')}</select>
+      </div>
+      <div class="col">
+        <label class="kv">نهاية (ساعة)</label>
+        <select class="input" name="endHour">${HOURS.map(h=>`<option value="${h}" ${h===lec.endHour?'selected':''}>${hourLabel(h)}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div>
+      <label class="kv">المكان (اختياري)</label>
+      <input class="input" name="location" value="${escapeHtml(lec.location||'')}" />
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px">
+      <button class="small-btn" type="submit" style="background:white;color:#3730a3">حفظ</button>
+      <button class="small-btn" type="button" id="cancelEdit" style="background:#ef4444;color:white">إلغاء</button>
+    </div>
+  `;
+  card.appendChild(form);
+  form.querySelector('#cancelEdit').addEventListener('click', ()=> renderAll());
+  form.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    lec.title = fd.get('title').trim();
+    lec.day = fd.get('day');
+    lec.startHour = parseInt(fd.get('startHour'),10);
+    lec.endHour = parseInt(fd.get('endHour'),10);
+    if(lec.endHour <= lec.startHour) lec.endHour = lec.startHour + 1;
+    lec.location = fd.get('location').trim();
+    saveData(DATA);
+    renderAll();
+  });
+}
+
+/* Slot click -> edit */
+function attachSlotClickHandlers(){
+  document.querySelectorAll('#timetable td .slot').forEach(s=>{
+    s.style.cursor = 'pointer';
+    s.removeEventListener('click', slotClickHandler);
+    s.addEventListener('click', slotClickHandler);
+  });
+}
+function slotClickHandler(){
+  const id = this.getAttribute('data-id');
+  if(!id) return;
+  const editBtn = document.querySelector('.icon-btn.edit[data-id="'+id+'"]');
+  if(editBtn) editBtn.click();
+}
+
+/* Add form */
+document.getElementById('addForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const title = document.getElementById('fTitle').value.trim();
+  const day = document.getElementById('fDay').value;
+  const startHour = parseInt(document.getElementById('fStartH').value,10);
+  const endHour = parseInt(document.getElementById('fEndH').value,10);
+  if(endHour <= startHour){ alert('الوقت غير صالح — اجعل نهاية المحاضرة بعد بدايتها'); return; }
+  const lec = { id: uid(), title, day, startHour, endHour, startMin:0, endMin:0, location: document.getElementById('fLocation').value.trim() };
+  DATA.lectures.push(lec);
+  saveData(DATA);
+  e.target.reset();
+  renderAll();
+});
+
+/* Clear all */
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  if(confirm('مسح كل المحاضرات؟')){ DATA = {lectures:[]}; saveData(DATA); renderAll(); }
+});
+
+/* Export/Import/Print */
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  const a = document.createElement('a');
+  const blob = new Blob([JSON.stringify(DATA)], {type:'application/json'});
+  a.href = URL.createObjectURL(blob);
+  a.download = 'jadwal-backup.json';
+  a.click();
+});
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const inp = document.createElement('input'); inp.type='file'; inp.accept='application/json';
+  inp.onchange = ()=>{
+    const f = inp.files[0]; const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const parsed = JSON.parse(reader.result);
+        if(parsed && Array.isArray(parsed.lectures)){ DATA = parsed; saveData(DATA); renderAll(); alert('تم الاستيراد'); }
+        else alert('الملف لا يبدو متوافقاً');
+      }catch(e){ alert('خطأ في قراءة الملف'); }
+    };
+    reader.readAsText(f);
+  };
+  inp.click();
+});
+document.getElementById('printBtn').addEventListener('click', ()=> window.print());
+
+/* Restore default demo data */
+document.getElementById('restoreDefault').addEventListener('click', ()=>{
+  if(confirm('ستستبدل البيانات الحالية بالبيانات الافتراضية. متابعة؟')){
+    DATA = { lectures: [
+      {id: uid(), title:'كيمياء حيوية', day:'الأحد', startHour:9, endHour:11, startMin:0, endMin:0, location:'قاعة 1'},
+      {id: uid(), title:'تشريح', day:'الاثنين', startHour:10, endHour:12, startMin:0, endMin:0, location:'قاعة 2'},
+      {id: uid(), title:'ميكروبيولوجي', day:'الثلاثاء', startHour:8, endHour:10, startMin:0, endMin:0, location:'مختبر 3'},
+      {id: uid(), title:'فسيولوجي', day:'الأربعاء', startHour:12, endHour:14, startMin:0, endMin:0, location:'قاعة 4'},
+      {id: uid(), title:'إحصاء', day:'الخميس', startHour:9, endHour:10, startMin:0, endMin:0, location:'قاعة 5'}
+    ]};
+    saveData(DATA);
+    renderAll();
+  }
+});
+
+/* Countdown logic */
+function getNextLectureObj(){
+  const now = new Date();
+  const jsWeek = ['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const todayName = jsWeek[now.getDay()];
+  const todays = (DATA.lectures||[]).filter(l => l.day === todayName).sort((a,b)=> a.startHour - b.startHour);
+  const nowHour = now.getHours() + now.getMinutes()/60 + now.getSeconds()/3600;
+  const current = todays.find(l => (l.startHour + (l.startMin||0)/60) <= nowHour && nowHour < (l.endHour + (l.endMin||0)/60));
+  if(current) return {type:'current', lecture: current};
+  const nextToday = todays.find(l => l.startHour > nowHour);
+  if(nextToday) return {type:'next', lecture: nextToday, daysAway:0};
+  for(let i=1;i<=7;i++){
+    const idx = (DAYS.indexOf(todayName) + i) % 7;
+    const dayName = DAYS[idx];
+    const dayLects = (DATA.lectures||[]).filter(l => l.day === dayName).sort((a,b)=> a.startHour - b.startHour);
+    if(dayLects.length > 0) return {type:'upcoming', lecture: dayLects[0], daysAway: i};
+  }
+  return null;
+}
+
+function startCountdown(){
+  const el = document.getElementById('countdown');
+  function update(){
+    const obj = getNextLectureObj();
+    if(!obj){ el.textContent = '🎓 لا توجد محاضرات مسجلة'; return; }
+    const now = new Date();
+    if(obj.type === 'current'){ el.textContent = '🕒 المحاضرة الحالية: ' + obj.lecture.title; return; }
+    let target;
+    if(obj.type === 'next') target = new Date(now.getFullYear(), now.getMonth(), now.getDate(), obj.lecture.startHour, obj.lecture.startMin||0, 0);
+    else target = new Date(now.getFullYear(), now.getMonth(), now.getDate() + obj.daysAway, obj.lecture.startHour, obj.lecture.startMin||0, 0);
+    const diff = Math.max(0, target - now);
+    const days = Math.floor(diff / 86400000);
+    const hrs = Math.floor((diff % 86400000) / 3600000);
+    const mins = Math.floor((diff % 3600000) / 60000);
+    const secs = Math.floor((diff % 60000) / 1000);
+    let when = '';
+    if(obj.type === 'upcoming') when = `بعد ${obj.daysAway} يوم`;
+    else if(days>0) when = `${days} يوم `;
+    el.textContent = `⏳ المحاضرة القادمة: ${obj.lecture.title} — ${when} ${hrs}س ${mins}د ${secs}ث`;
+  }
+  update();
+  if(window._jadwal_countdown_interval) clearInterval(window._jadwal_countdown_interval);
+  window._jadwal_countdown_interval = setInterval(update, 1000);
+}
+
+/* Render all */
+function renderAll(){
+  populateSelectors();
+  renderTable();
+  renderList();
+  startCountdown();
+}
+
+/* Attach unload save */
+window.addEventListener('beforeunload', ()=> saveData(DATA));
+
+/* Initialize default demo if empty */
+if(!DATA.lectures || DATA.lectures.length === 0){
+  // keep empty so user can choose to restore demo; do not auto-fill.
+  DATA = {lectures:[]};
+  saveData(DATA);
+}
+
+/* Initial render */
+renderAll();
+
+/* Expose helper for debugging in console */
+window.jadwal = {
+  data: ()=> JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"lectures":[]}'),
+  clear: ()=>{ if(confirm('مسح كل البيانات؟')){ localStorage.removeItem(STORAGE_KEY); DATA={lectures:[]}; renderAll(); } }
+};
+</script>
+</body>
+</html>
