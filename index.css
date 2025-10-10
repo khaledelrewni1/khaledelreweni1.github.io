@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* افتراضياً Cairo غير مضمّن؛ يمكنك إضافة Google Font في index.html لاحقًا */
+body { font-family: 'Cairo', sans-serif; }
