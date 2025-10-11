@@ -142,8 +142,20 @@ function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(3
 function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {lectures:[], instructors:[], changes:[]}; }catch(e){ console.error('loadData error:', e); return {lectures:[], instructors:[], changes:[]}; } }
 function saveData(d){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(e){ console.error('saveData error:', e); } }
 
-let DATA = loadData();
-window.isAdmin = false;
+let DATA = loadData() || {  // لو مفيش بيانات محلية، استخدم البيانات الافتراضية
+  lectures: [  // ضع هنا قائمة المحاضرات اللي أضفتها
+    { id: 'lec1', day: 'الأحد', startHour: 8, startMin: 0, endHour: 9, endMin: 30, title: 'رياضيات 101', instructorId: 'inst1', instructorName: null, location: 'قاعة 101', notes: 'محاضرة أساسية', link: '' },
+    { id: 'lec2', day: 'الأحد', startHour: 10, startMin: 0, endHour: 11, endMin: 0, title: 'فيزياء', instructorId: null, instructorName: 'د. محمد', location: 'قاعة 102', notes: '', link: 'https://zoom.us/j/123456' },
+    // أضف باقي المحاضرات اللي عايزها... (انسخ من JSON اللي صدرته)
+    // مثال: { id: uid(), day: 'الاثنين', ... }
+  ],
+  instructors: [  // ضع هنا قائمة الدكاترة
+    { id: 'inst1', name: 'د. أحمد', title: 'أستاذ رياضيات', subjects: ['رياضيات'], bio: 'متخصص في الجبر' },
+    { id: 'inst2', name: 'د. محمد', title: 'أستاذ فيزياء', subjects: ['فيزياء'], bio: 'متخصص في الكهرباء' },
+    // أضف باقي الدكاترة...
+  ],
+  changes: []  // سجل التعديلات (اتركه فارغ)
+};window.isAdmin = false;
 
 /* Helpers */
 function getInstructorName(id){ if(!id) return null; const i = DATA.instructors.find(x=>x.id===id); return i?i.name:null; }
