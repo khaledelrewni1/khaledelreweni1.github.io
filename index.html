@@ -130,7 +130,19 @@ const DAYS = ['السبت','الأحد','الاثنين','الثلاثاء','ا�
 const HOURS = Array.from({length:15},(_,i)=>8+i);
 
 /* Time helpers */
-function to12(h){ const period = h>=12 ? 'م' : 'ص'; let hh = h%12; if(hh===0) hh=12; return hh + ':00 ' + period; }
+function formatHeader(h) {
+  let start = h % 12;
+  if (start === 0) start = 12;
+  let end = (h + 1) % 12;
+  if (end === 0) end = 12;
+  const startPeriod = h < 12 ? 'ص' : 'م';
+  const endPeriod = (h + 1) <= 12 ? 'ص' : 'م';
+  if (startPeriod === endPeriod) {
+    return `${start} - ${end} ${startPeriod}`;
+  } else {
+    return `${start} ${startPeriod} - ${end} ${endPeriod}`;
+  }
+}
 function to12WithMin(h,m){ const hour = parseInt(h,10); const period = hour>=12 ? 'م' : 'ص'; let hh = hour%12; if(hh===0) hh=12; return hh + ':' + String(m).padStart(2,'0') + ' ' + period; }
 
 /* Data storage */
@@ -139,6 +151,7 @@ function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) |
 function saveData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 
 let DATA = loadData();
+let editingId = null;
 
 /* Helpers */
 function getInstructorName(id){ if(!id) return null; const i = DATA.instructors.find(x=>x.id===id); return i?i.name:null; }
@@ -154,21 +167,90 @@ function renderTable(){
   const container=document.getElementById('tableContainer'); container.innerHTML='';
   const table=document.createElement('table'); table.className='table';
   const thead=document.createElement('thead'); const headRow=document.createElement('tr'); headRow.appendChild(document.createElement('th'));
-  HOURS.forEach(h=>{ const th=document.createElement('th'); th.innerText=to12(h); headRow.appendChild(th); });
+  HOURS.forEach(h=>{ const th=document.createElement('th'); th.innerText=formatHeader(h); headRow.appendChild(th); });
   thead.appendChild(headRow); table.appendChild(thead);
   const tbody=document.createElement('tbody'); const map={};
   DATA.lectures.forEach(l=>{ if(!l.day) return; if(!map[l.day]) map[l.day]=[]; map[l.day].push(l); });
-  DAYS.forEach(day=>{ const tr=document.createElement('tr'); const dayCell=document.createElement('th'); dayCell.innerText=day; tr.appendChild(dayCell);
-    HOURS.forEach(h=>{ const td=document.createElement('td'); const lectures=(map[day]||[]).filter(l=>{ const start=l.startHour+(l.startMin||0)/60; const end=l.endHour+(l.endMin||0)/60; return start<=h && h<end; });
-      if(lectures.length===0){ td.innerHTML='<div class="slot empty">'+h+':00 — فارغ</div>'; }
-      else{
-        // if multiple lectures (different instructors same subject), list them stacked
-        const box=document.createElement('div');
-        lectures.forEach(lec=>{ const col=genColor(lec.title); const div=document.createElement('div'); div.className='slot'; div.style.background=col.bg; div.style.borderRadius='8px'; div.style.padding='6px'; div.style.marginBottom='6px'; const title=document.createElement('div'); title.style.fontWeight='800'; title.style.color=col.solid; title.innerText=lec.title; const meta=document.createElement('div'); meta.className='meta'; meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد')); const timeEl=document.createElement('div'); timeEl.className='meta'; timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0); div.appendChild(title); div.appendChild(meta); div.appendChild(timeEl); if(lec.link){ const a=document.createElement('a'); a.href=lec.link; a.target='_blank'; a.innerText='رابط المحاضرة'; a.style.display='block'; a.style.marginTop='6px'; div.appendChild(a); } if(isNowInLecture(lec)) div.classList.add('current'); box.appendChild(div); });
-        td.appendChild(box);
-      }
-      tr.appendChild(td);
+  DAYS.forEach(day=>{ 
+    const tr=document.createElement('tr'); 
+    const dayCell=document.createElement('th'); 
+    dayCell.innerText=day; 
+    tr.appendChild(dayCell);
+    const dayLectures = (map[day] || []).sort((a,b) => (a.startHour + (a.startMin || 0)/60) - (b.startHour + (b.startMin || 0)/60));
+    let hourToLecs = {};
+    HOURS.forEach(hh => {
+      hourToLecs[hh] = dayLectures.filter(l => {
+        const s = l.startHour + (l.startMin || 0)/60;
+        const e = l.endHour + (l.endMin || 0)/60;
+        return s <= hh && hh < e;
+      });
     });
+    let hourIdx = 0;
+    while (hourIdx < HOURS.length) {
+      const h = HOURS[hourIdx];
+      const currentLecs = hourToLecs[h];
+      if (currentLecs.length === 0) {
+        const td = document.createElement('td');
+        td.innerHTML = '<div class="slot empty">فارغ</div>';
+        tr.appendChild(td);
+        hourIdx++;
+        continue;
+      }
+      // Calculate span where the set of lectures is the same
+      let span = 1;
+      const lecIds = currentLecs.map(l => l.id).sort();
+      const key = JSON.stringify(lecIds);
+      while (hourIdx + span < HOURS.length) {
+        const nextH = HOURS[hourIdx + span];
+        const nextLecs = hourToLecs[nextH];
+        const nextIds = nextLecs.map(l => l.id).sort();
+        const nextKey = JSON.stringify(nextIds);
+        if (nextKey === key) {
+          span++;
+        } else {
+          break;
+        }
+      }
+      const td = document.createElement('td');
+      td.colSpan = span;
+      const box = document.createElement('div');
+      currentLecs.forEach(lec => {
+        const col = genColor(lec.title);
+        const div = document.createElement('div');
+        div.className = 'slot';
+        div.style.background = col.bg;
+        div.style.borderRadius = '8px';
+        div.style.padding = '6px';
+        div.style.marginBottom = '6px';
+        const title = document.createElement('div');
+        title.style.fontWeight = '800';
+        title.style.color = col.solid;
+        title.innerText = lec.title;
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerText = (getInstructorName(lec.instructorId) || lec.instructorName || '') + ' • ' + (lec.location || (lec.link ? 'أونلاين' : 'غير محدد'));
+        const timeEl = document.createElement('div');
+        timeEl.className = 'meta';
+        timeEl.innerText = to12WithMin(lec.startHour, lec.startMin || 0) + ' — ' + to12WithMin(lec.endHour, lec.endMin || 0);
+        div.appendChild(title);
+        div.appendChild(meta);
+        div.appendChild(timeEl);
+        if (lec.link) {
+          const a = document.createElement('a');
+          a.href = lec.link;
+          a.target = '_blank';
+          a.innerText = 'رابط المحاضرة';
+          a.style.display = 'block';
+          a.style.marginTop = '6px';
+          div.appendChild(a);
+        }
+        if (isNowInLecture(lec)) div.classList.add('current');
+        box.appendChild(div);
+      });
+      td.appendChild(box);
+      tr.appendChild(td);
+      hourIdx += span;
+    }
     tbody.appendChild(tr);
   });
   table.appendChild(tbody); container.appendChild(table); renderLegend();
@@ -200,51 +282,4 @@ function showDay(day){
 }
 
 /* Render instructors */
-function renderInstructors(){ const list=document.getElementById('instructorList'); list.innerHTML=''; if(DATA.instructors.length===0){ list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; return; } DATA.instructors.forEach(i=>{ const c=document.createElement('div'); c.className='card'; c.innerHTML='<div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div>' + (i.subjects?('<div class="kv">المواد: '+escapeHtml(i.subjects.join(', '))+'</div>'):''); list.appendChild(c); }); }
-
-/* Legend */
-function renderLegend(){ const legend=document.getElementById('legend'); legend.innerHTML=''; const titles=Array.from(new Set(DATA.lectures.map(l=>l.title).filter(Boolean))); titles.forEach(t=>{ const el=document.createElement('div'); el.className='legend-item'; const col=genColor(t); el.innerHTML='<span style="display:inline-block;width:12px;height:12px;background:'+col.solid+';border-radius:4px;margin-left:8px"></span>'+escapeHtml(t); legend.appendChild(el); }); }
-
-/* genColor */
-function genColor(title){ if(!title) return {bg:'rgba(243,244,246,0.6)',solid:'#e5e7eb'}; if(colorCache[title]) return colorCache[title]; let h=0; for(let i=0;i<title.length;i++){ h=(h<<5)-h+title.charCodeAt(i); h|=0; } const r=Math.abs(h)%200+20; const g=(Math.abs(h*13)%150)+80; const b=(Math.abs(h*7)%180)+40; const bg='rgba('+r+','+g+','+b+',0.18)'; const solid='rgba('+r+','+g+','+b+',0.95)'; colorCache[title]={bg,solid}; return colorCache[title]; }
-
-/* Admin UI (password -> admin panel) */
-function openAdminFlow(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal'; m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور</p><input id="pw" class="input" type="password" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; wrap.appendChild(m); root.appendChild(wrap); root.style.display='block'; document.getElementById('cancelPw').onclick=()=>{ root.style.display='none'; root.innerHTML=''; }; document.getElementById('submitPw').onclick=()=>{ const v=document.getElementById('pw').value; if(v===ADMIN_PASSWORD){ root.style.display='none'; root.innerHTML=''; openAdmin(); } else alert('كلمة المرور خاطئة'); }; }
-
-function openAdmin(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal'; m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ</button> <button id="closeBtn" class="btn">خروج</button></div></div><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; wrap.appendChild(m); root.appendChild(wrap); root.style.display='block'; document.getElementById('closeBtn').onclick=()=>{ root.style.display='none'; root.innerHTML=''; }; document.getElementById('saveBtn').onclick=()=>{ saveData(DATA); alert('تم الحفظ'); renderAll(); }; document.getElementById('tabLect').onclick=()=> renderAdminLectures(); document.getElementById('tabInst').onclick=()=> renderAdminInstructors(); document.getElementById('tabImp').onclick=()=> renderAdminImportExport(); renderAdminLectures(); }
-
-function renderAdminLectures(){ const body=document.getElementById('adminBody'); body.innerHTML=''; const form=document.createElement('form'); const hourOptions=HOURS.map(h=>'<option value="'+h+'">'+to12(h)+'</option>').join(''); const minuteOptions='<option value=\"0\">00</option><option value=\"30\">30</option>'; const instOptions='<option value=\"\">اختر دكتور (اختياري)</option>'+DATA.instructors.map(i=>'<option value=\"'+i.id+'\">'+escapeHtml(i.name)+'</option>').join(''); form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; body.appendChild(form); form.onsubmit=(e)=>{ e.preventDefault(); const day=document.getElementById('fDay').value; const sh=+document.getElementById('fStartH').value; const sm=+document.getElementById('fStartM').value; const eh=+document.getElementById('fEndH').value; const em=+document.getElementById('fEndM').value; let startNum=sh + (sm>0?0.5:0); let endNum=eh + (em>0?0.5:0); if(endNum<=startNum) endNum = startNum + 1; const startHour=Math.floor(startNum); const endHour=Math.ceil(endNum); const lec={ id: uid(), day, startHour, startMin: sm, endHour, endMin: em, title: document.getElementById('fTitle').value.trim(), instructorId: document.getElementById('fInst').value || null, instructorName: null, location: document.getElementById('fLocation').value.trim(), notes: document.getElementById('fNotes').value.trim(), link: '' }; DATA.lectures.push(lec); saveData(DATA); renderAdminLectures(); renderAll(); }; const list=document.createElement('div'); list.style.marginTop='12px'; if(DATA.lectures.length===0) list.innerHTML='<div class="card">لا توجد محاضرات بعد</div>'; else{ const ul=document.createElement('div'); ul.style.display='grid'; ul.style.gap='8px'; DATA.lectures.forEach(l=>{ const el=document.createElement('div'); el.className='card'; const instName=getInstructorName(l.instructorId) || l.instructorName || ''; el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(l.title)+'</div><div class="kv">'+escapeHtml(l.day)+' '+to12WithMin(l.startHour,l.startMin)+' — '+to12WithMin(l.endHour,l.endMin)+' • '+escapeHtml(instName)+'</div></div><div><button class="btn" data-id="'+l.id+'">حذف</button></div></div>'; ul.appendChild(el); }); list.appendChild(ul); list.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-id'); if(confirm('حذف المحاضرة؟')){ DATA.lectures = DATA.lectures.filter(x=> x.id !== id); saveData(DATA); renderAdminLectures(); renderAll(); } })); } body.appendChild(list); }
-
-function renderAdminInstructors(){ const body=document.getElementById('adminBody'); body.innerHTML=''; const form=document.createElement('form'); form.innerHTML='<div class="row"><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور</button></div>'; body.appendChild(form); form.onsubmit=(e)=>{ e.preventDefault(); const inst={ id: uid(), name: document.getElementById('iName').value.trim(), title: document.getElementById('iTitle').value.trim(), subjects: document.getElementById('iSubjects').value.split(',').map(s=>s.trim()).filter(Boolean), bio: document.getElementById('iBio').value.trim() }; DATA.instructors.push(inst); saveData(DATA); renderAdminInstructors(); renderAll(); }; const list=document.createElement('div'); list.style.marginTop='12px'; if(DATA.instructors.length===0) list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; else{ const ul=document.createElement('div'); ul.style.display='grid'; ul.style.gap='8px'; DATA.instructors.forEach(i=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div></div><div><button class="btn" data-id="'+i.id+'">حذف</button></div></div>'; ul.appendChild(el); }); list.appendChild(ul); list.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-id'); if(confirm('حذف الدكتور؟')){ DATA.instructors = DATA.instructors.filter(x=> x.id!==id); saveData(DATA); renderAdminInstructors(); renderAll(); } })); } body.appendChild(list); }
-
-function renderAdminImportExport(){ const body=document.getElementById('adminBody'); body.innerHTML=''; const exportBtn=document.createElement('button'); exportBtn.className='btn'; exportBtn.innerText='تحميل JSON'; exportBtn.onclick=()=>{ const a=document.createElement('a'); const blob=new Blob([JSON.stringify(DATA)],{type:'application/json'}); a.href=URL.createObjectURL(blob); a.download='jadwal-v3-backup.json'; a.click(); }; const importBtn=document.createElement('button'); importBtn.className='btn'; importBtn.style.marginLeft='8px'; importBtn.innerText='استيراد JSON'; importBtn.onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange=()=>{ const f=inp.files[0]; const reader=new FileReader(); reader.onload=()=>{ try{ DATA = JSON.parse(reader.result); saveData(DATA); renderAll(); alert('تم الاستيراد'); }catch(e){ alert('ملف غير صحيح'); } }; reader.readAsText(f); }; inp.click(); }; body.appendChild(exportBtn); body.appendChild(importBtn); body.appendChild(document.createElement('div')); }
-
-/* Admin flow */
-function openAdminFlowHandlers(){ document.getElementById('adminBtn').addEventListener('click', ()=> openAdminFlow()); }
-document.addEventListener('DOMContentLoaded', ()=> openAdminFlowHandlers());
-
-function openAdminFlow(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal'; m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور</p><input id="pw" class="input" type="password" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; wrap.appendChild(m); root.appendChild(wrap); root.style.display='block'; document.getElementById('cancelPw').onclick=()=>{ root.style.display='none'; root.innerHTML=''; }; document.getElementById('submitPw').onclick=()=>{ const v=document.getElementById('pw').value; if(v===ADMIN_PASSWORD){ root.style.display='none'; root.innerHTML=''; openAdmin(); } else alert('كلمة المرور خاطئة'); }; }
-
-/* Live check */
-function isNowInLecture(lec){ if(!lec) return false; const now=new Date(); const jsWeek=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']; const todayName=jsWeek[now.getDay()]; if(lec.day !== todayName) return false; const start=new Date(); start.setHours(lec.startHour, lec.startMin||0,0,0); const end=new Date(); end.setHours(lec.endHour, lec.endMin||0,0,0); return now>=start && now<end; }
-function renderLiveNotice(){ const live=document.getElementById('liveNotice'); const now=new Date(); const jsWeek=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']; const todayName=jsWeek[now.getDay()]; const todays = (DATA.lectures||[]).filter(l=> l.day===todayName).map(l=>{ const s=new Date(); s.setHours(l.startHour,l.startMin||0,0,0); return {l,s}; }).sort((a,b)=> a.s-b.s); const current = (DATA.lectures||[]).find(l=> isNowInLecture(l)); if(current){ live.innerText='🕒 الآن في محاضرة: ' + current.title; return; } if(todays.length>0){ const next = todays.find(t=> t.s>now); if(next) live.innerText='⏳ المحاضرة القادمة اليوم: ' + next.l.title + ' بعد ' + timeRemaining(next.s); else live.innerText='لا توجد محاضرات لاحقة اليوم'; return; } live.innerText='لا توجد محاضرات الآن'; }
-
-function timeRemaining(targetDate){ const diff = Math.max(0, targetDate - new Date()); const hrs = Math.floor(diff/3600000); const mins = Math.floor((diff%3600000)/60000); return (hrs>0? hrs+' ساعة ':'') + mins + ' دقيقة'; }
-
-/* Export/Import/Print handlers */
-document.getElementById('exportBtn').addEventListener('click', ()=>{ const a=document.createElement('a'); const blob=new Blob([JSON.stringify(DATA)],{type:'application/json'}); a.href=URL.createObjectURL(blob); a.download='jadwal-v3-backup.json'; a.click(); });
-document.getElementById('importBtn').addEventListener('click', ()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange=()=>{ const f=inp.files[0]; const reader=new FileReader(); reader.onload=()=>{ try{ DATA = JSON.parse(reader.result); saveData(DATA); renderAll(); alert('تم الاستيراد'); }catch(e){ alert('ملف غير صحيح'); } }; reader.readAsText(f); }; inp.click(); });
-document.getElementById('printBtn').addEventListener('click', ()=>{ const w=window.open('','_blank'); w.document.open(); w.document.write('<!doctype html><html lang=\"ar\" dir=\"rtl\"><head><meta charset=\"utf-8\"/><title>جدول المحاضرات</title><style>body{font-family:Arial,sans-serif;padding:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#f0f0f0}</style></head><body><h2>جدول المحاضرات</h2>'+document.getElementById('tableContainer').innerHTML+'<p>تصميم وبرمجة: Khaled El-Reweni</p></body></html>'); w.document.close(); setTimeout(()=>{ w.print(); },600); });
-
-/* Tab switching */
-document.querySelectorAll('.tab-btn').forEach(b=> b.addEventListener('click', ()=>{ document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); const tab=b.getAttribute('data-tab'); document.getElementById('tab-weekly').style.display = tab==='weekly' ? 'block' : 'none'; document.getElementById('tab-day').style.display = tab==='day' ? 'block' : 'none'; document.getElementById('tab-instructors').style.display = tab==='instructors' ? 'block' : 'none'; }));
-
-function renderAll(){ renderTable(); renderDaysTabs(); renderInstructors(); renderLiveNotice(); }
-renderAll();
-setInterval(()=>{ renderAll(); },60000); // refresh each minute
-
-/* expose API */
-window.jadwal_v3 = { data: ()=> JSON.stringify(DATA), clear: ()=>{ if(confirm('مسح كل البيانات؟')){ DATA={lectures:[], instructors:[]}; saveData(DATA); renderAll(); } } };
-</script>
-</body>
-</html>
+function renderInstructors(){ const list=document.getElementById('instructorList'); list.innerHTML=''; if(DATA.instructors.length===0){ list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; return; }
