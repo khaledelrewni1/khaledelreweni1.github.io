@@ -152,20 +152,255 @@ const HOURS = Array.from({length:15},(_,i)=>8+i); // 8 ص إلى 10 م (15 سا�
 
 /* بيانات افتراضية ثابتة (hardcode) – عدلها هنا وارفع على GitHub عشان تظهر للكل */
 let DATA = {
-  lectures: [  // أضف محاضراتك الحقيقية هنا (انسخ من JSON اللي صدرته قبل كده)
-    { id: 'lec1', day: 'الأحد', startHour: 8, startMin: 0, endHour: 9, endMin: 30, title: 'رياضيات 101', instructorId: 'inst1', instructorName: null, location: 'قاعة 101', notes: 'محاضرة أساسية', link: '' },
-    { id: 'lec2', day: 'الأحد', startHour: 10, startMin: 0, endHour: 11, endMin: 0, title: 'فيزياء', instructorId: null, instructorName: 'د. محمد', location: 'قاعة 102', notes: '', link: 'https://zoom.us/j/123456' },
-    { id: 'lec3', day: 'الاثنين', startHour: 9, startMin: 0, endHour: 10, endMin: 30, title: 'برمجة', instructorId: 'inst2', instructorName: null, location: 'أونلاين', notes: 'استخدم VS Code', link: 'https://meet.google.com/abc-def' },
-    { id: 'lec4', day: 'الثلاثاء', startHour: 14, startMin: 0, endHour: 15, endMin: 30, title: 'كيمياء', instructorId: 'inst1', instructorName: null, location: 'قاعة 103', notes: '', link: '' },
-    // أضف المزيد من المحاضرات هنا...
-  ],
-  instructors: [  // أضف دكاترةك الحقيقيين هنا
-    { id: 'inst1', name: 'د. أحمد', title: 'أستاذ رياضيات', subjects: ['رياضيات', 'كيمياء'], bio: 'متخصص في الجبر والعلوم' },
-    { id: 'inst2', name: 'د. سارة', title: 'أستاذة برمجة', subjects: ['برمجة'], bio: 'متخصصة في JavaScript و Web Development' },
-    { id: 'inst3', name: 'د. محمد', title: 'أستاذ فيزياء', subjects: ['فيزياء'], bio: 'متخصص في الكهرباء والميكانيكا' },
-    // أضف المزيد من الدكاترة هنا...
-  ],
-  changes: []  // سجل التعديلات
+  lectures: [
+  {
+    "id": "idmgmpsika3qsxarr",
+    "day": "السبت",
+    "startHour": 10,
+    "startMin": 0,
+    "endHour": 14,
+    "endMin": 0,
+    "title": "أساسيات تمريض نظري",
+    "instructorId": "idmgmppo05hohhc2a",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpsz94t0e99l6",
+    "day": "السبت",
+    "startHour": 19,
+    "startMin": 0,
+    "endHour": 20,
+    "endMin": 0,
+    "title": "علم الأدوية",
+    "instructorId": "idmgmppuxcbxi1den",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmptfeanvioois",
+    "day": "السبت",
+    "startHour": 20,
+    "startMin": 0,
+    "endHour": 22,
+    "endMin": 0,
+    "title": "قضايا مجتعمية",
+    "instructorId": "idmgmpq3h21xx212z",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpug13730m16c",
+    "day": "الأحد",
+    "startHour": 9,
+    "startMin": 0,
+    "endHour": 11,
+    "endMin": 0,
+    "title": "تكنولوجيا المعلومات",
+    "instructorId": "idmgmpqa5qqyf0nzw",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpv1ngk5va8mo",
+    "day": "الأحد",
+    "startHour": 11,
+    "startMin": 0,
+    "endHour": 13,
+    "endMin": 0,
+    "title": "مهارات التواصل",
+    "instructorId": "idmgmpqgwlzfuzmfp",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpvuvji5i63d0",
+    "day": "الاثنين",
+    "startHour": 9,
+    "startMin": 0,
+    "endHour": 11,
+    "endMin": 0,
+    "title": "أخلاقيات المهنة",
+    "instructorId": "idmgmpqp7cjku2mud",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpwc4otaxwt8k",
+    "day": "الثلاثاء",
+    "startHour": 9,
+    "startMin": 0,
+    "endHour": 11,
+    "endMin": 0,
+    "title": "التغذية",
+    "instructorId": "idmgmpr2vt4aplmm6",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpwxfmvhiz0pz",
+    "day": "الثلاثاء",
+    "startHour": 11,
+    "startMin": 0,
+    "endHour": 13,
+    "endMin": 0,
+    "title": "التثقيف الصحي",
+    "instructorId": "idmgmpreo1qm5kzsv",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq4y5wueq1ygn",
+    "day": "الأربعاء",
+    "startHour": 11,
+    "startMin": 0,
+    "endHour": 17,
+    "endMin": 0,
+    "title": "أساسيات التمريض (عملي)",
+    "instructorId": "idmgmprrsmw1qub9g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq5mhj66lo0na",
+    "day": "الخميس",
+    "startHour": 8,
+    "startMin": 0,
+    "endHour": 14,
+    "endMin": 0,
+    "title": "أساسيات التمريض (عملي)",
+    "instructorId": "idmgmprrsmw1qub9g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq7f7285cuk9i",
+    "day": "الخميس",
+    "startHour": 18,
+    "startMin": 0,
+    "endHour": 19,
+    "endMin": 0,
+    "title": "لغة إنجليزية 2",
+    "instructorId": "idmgmq6jaotttg27g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  }
+],
+  instructors: [
+  {
+    "id": "idmgmppo05hohhc2a",
+    "name": "د.دعاء أمين \\ د.أسماء شحاته",
+    "title": "",
+    "subjects": [
+      "أساسيات تمريض نظري"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmppuxcbxi1den",
+    "name": "د.ياسمين عطية",
+    "title": "",
+    "subjects": [
+      "علم الأدوية"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpq3h21xx212z",
+    "name": "د.بسمة طاهر",
+    "title": "",
+    "subjects": [
+      "قضايا مجتمعية"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpqa5qqyf0nzw",
+    "name": "د.أسماء محى الدين \\ د.سعاد عرفة",
+    "title": "",
+    "subjects": [
+      "تكنولوجيا المعلومات"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpqgwlzfuzmfp",
+    "name": "د.مروة فؤاد \\ د.إيمان السقا",
+    "title": "",
+    "subjects": [
+      "مهارات التواصل"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpqp7cjku2mud",
+    "name": "د.أمل جمال",
+    "title": "",
+    "subjects": [
+      "أخلاقيات المهنة"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpr2vt4aplmm6",
+    "name": "د.جيهان الزلباني",
+    "title": "",
+    "subjects": [
+      "التغذية"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpreo1qm5kzsv",
+    "name": "د.سالي فايد \\ د.إيمان عنان",
+    "title": "",
+    "subjects": [
+      "التثقيف الصحي"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmprrsmw1qub9g",
+    "name": "م \\ اسماء البنان – م\\ اسراء السعيد – م\\ مريم ربيع",
+    "title": "",
+    "subjects": [
+      "أساسيات التمريض (عملي)"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmq6jaotttg27g",
+    "name": "د.ابتسام الشقروفي",
+    "title": "",
+    "subjects": [
+      "لغة انجليزية"
+    ],
+    "bio": ""
+  }
+],
+  changes: []
 };
 
 window.isAdmin = false;
