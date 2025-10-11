@@ -607,7 +607,8 @@ function openAdmin(){
   const root=document.getElementById('modalRoot'); 
   if(!root) return;
   root.innerHTML=''; 
-  const wrap=document.createElement('div');   wrap.className='modal-back'; 
+  const wrap=document.createElement('div'); 
+  wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal'; 
   m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات محفوظة محليًا في متصفحك. لجعلها تظهر للجميع، استخدم "تصدير كود GitHub" في تبويب الاستيراد/تصدير، ثم انسخ الكود ولصقه في ملف HTML على GitHub وارفع.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
@@ -625,10 +626,25 @@ function openAdmin(){
     alert('تم حفظ التعديلات محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
     renderAll(); 
   }; 
-  document.getElementById('tabLect').onclick=()=>{ 
+  // تعديل: استخدم regular functions عشان 'this' يشتغل صح
+  document.getElementById('tabLect').onclick = function() { 
     document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
     this.classList.add('active'); 
     renderAdminLectures(); 
+  }; 
+  document.getElementById('tabInst').onclick = function() { 
+    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
+    this.classList.add('active'); 
+    renderAdminInstructors(); 
+  }; 
+  document.getElementById('tabImp').onclick = function() { 
+    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
+    this.classList.add('active'); 
+    renderAdminImportExport(); 
+  }; 
+  loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
+  renderAdminLectures(); // افتراضي: المحاضرات
+}
   }; 
   document.getElementById('tabInst').onclick=()=>{ 
     document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
