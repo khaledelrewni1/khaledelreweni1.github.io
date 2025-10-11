@@ -13,6 +13,7 @@
   --card:#ffffff; --text:#071127; --muted:#475569;
   --cell-border: rgba(2,6,23,0.06);
   --th-bg: rgba(0,0,0,0.03);
+  transition: all 0.3s ease; /* انتقال سلس للثيم */
 }
 [data-theme="dark"]{
   --card:#071127; --text:#e6eef8; --muted:#9ca3af; --cell-border: rgba(255,255,255,0.06);
@@ -62,6 +63,20 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 }
 .notice-small{font-size:13px;color:rgba(255,255,255,0.9);opacity:0.95;margin-top:6px}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+/* إضافات للعداد المتقدم */
+.live-countdown {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+.upcoming-soon {
+  background: rgba(255, 215, 0, 0.2) !important;
+  border-color: #ffd700 !important;
+  animation: shake 0.5s;
+}
 </style>
 </head>
 <body>
@@ -128,37 +143,48 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 
 <script>
 /* Config */
-const ADMIN_PASSWORD = 'admin123'; // غيرها لشيء أقوى في الاستخدام الفعلي
-const STORAGE_KEY = 'jadwal_v3_data';
+const ENCODED_PASSWORD = 'TXlTZWNyZXRQYXNzMjAyNCEjQA=='; // base64 لـ 'MySecretPass2024!@#' – غيرها وأعد التشفير (استخدم base64 encoder online)
+const ADMIN_PASSWORD = atob(ENCODED_PASSWORD); // decode عند التشغيل
+const STORAGE_KEY_THEME = 'jadwal_theme'; // حفظ الثيم فقط (محلي لكل مستخدم)
 const DAYS = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
-const HOURS = Array.from({length:15},(_,i)=>8+i);
+const HOURS = Array.from({length:15},(_,i)=>8+i); // 8 ص إلى 10 م (15 ساعة)
+
+/* بيانات افتراضية ثابتة (hardcode) – عدلها هنا وارفع على GitHub عشان تظهر للكل تلقائيًا */
+let DATA = {
+  lectures: [  // أضف محاضراتك الحقيقية هنا (انسخ من JSON اللي صدرته قبل كده)
+    { id: 'lec1', day: 'الأحد', startHour: 8, startMin: 0, endHour: 9, endMin: 30, title: 'رياضيات 101', instructorId: 'inst1', instructorName: null, location: 'قاعة 101', notes: 'محاضرة أساسية', link: '' },
+    { id: 'lec2', day: 'الأحد', startHour: 10, startMin: 0, endHour: 11, endMin: 0, title: 'فيزياء', instructorId: null, instructorName: 'د. محمد', location: 'قاعة 102', notes: '', link: 'https://zoom.us/j/123456' },
+    { id: 'lec3', day: 'الاثنين', startHour: 9, startMin: 0, endHour: 10, endMin: 30, title: 'برمجة', instructorId: 'inst2', instructorName: null, location: 'أونلاين', notes: 'استخدم VS Code', link: 'https://meet.google.com/abc-def' },
+    { id: 'lec4', day: 'الثلاثاء', startHour: 14, startMin: 0, endHour: 15, endMin: 30, title: 'كيمياء', instructorId: 'inst1', instructorName: null, location: 'قاعة 103', notes: '', link: '' },
+    // أضف المزيد من المحاضرات هنا...
+  ],
+  instructors: [  // أضف دكاترةك الحقيقيين هنا
+    { id: 'inst1', name: 'د. أحمد', title: 'أستاذ رياضيات', subjects: ['رياضيات', 'كيمياء'], bio: 'متخصص في الجبر والعلوم' },
+    { id: 'inst2', name: 'د. سارة', title: 'أستاذة برمجة', subjects: ['برمجة'], bio: 'متخصصة في JavaScript و Web Development' },
+    { id: 'inst3', name: 'د. محمد', title: 'أستاذ فيزياء', subjects: ['فيزياء'], bio: 'متخصص في الكهرباء والميكانيكا' },
+    // أضف المزيد من الدكاترة هنا...
+  ],
+  changes: []  // سجل التعديلات (مش محفوظ، بس للعرض المؤقت في الإدارة)
+};
+
+window.isAdmin = false;
 
 /* Time helpers */
 function to12(h){ const period = h>=12 ? 'م' : 'ص'; let hh = h%12; if(hh===0) hh=12; return hh + ':00 ' + period; }
 function to12WithMin(h,m){ const hour = parseInt(h,10); const period = hour>=12 ? 'م' : 'ص'; let hh = hour%12; if(hh===0) hh=12; return hh + ':' + String(m).padStart(2,'0') + ' ' + period; }
 
-/* Data storage */
+/* دالة جديدة لعرض الساعة في رأس الجدول (12 ساعة بدون :00) */
+function displayHour(h) {
+  const period = h >= 12 ? 'م' : 'ص';
+  let hh = h % 12;
+  if (hh === 0) hh = 12;
+  return hh + ' ' + period;
+}
+
+/* Data helpers (بدون localStorage للبيانات الرئيسية) */
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,9); }
-function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {lectures:[], instructors:[], changes:[]}; }catch(e){ console.error('loadData error:', e); return {lectures:[], instructors:[], changes:[]}; } }
-function saveData(d){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(e){ console.error('saveData error:', e); } }
-
-let DATA = loadData() || {  // لو مفيش بيانات محلية، استخدم البيانات الافتراضية
-  lectures: [  // ضع هنا قائمة المحاضرات اللي أضفتها
-    { id: 'lec1', day: 'الأحد', startHour: 8, startMin: 0, endHour: 9, endMin: 30, title: 'رياضيات 101', instructorId: 'inst1', instructorName: null, location: 'قاعة 101', notes: 'محاضرة أساسية', link: '' },
-    { id: 'lec2', day: 'الأحد', startHour: 10, startMin: 0, endHour: 11, endMin: 0, title: 'فيزياء', instructorId: null, instructorName: 'د. محمد', location: 'قاعة 102', notes: '', link: 'https://zoom.us/j/123456' },
-    // أضف باقي المحاضرات اللي عايزها... (انسخ من JSON اللي صدرته)
-    // مثال: { id: uid(), day: 'الاثنين', ... }
-  ],
-  instructors: [  // ضع هنا قائمة الدكاترة
-    { id: 'inst1', name: 'د. أحمد', title: 'أستاذ رياضيات', subjects: ['رياضيات'], bio: 'متخصص في الجبر' },
-    { id: 'inst2', name: 'د. محمد', title: 'أستاذ فيزياء', subjects: ['فيزياء'], bio: 'متخصص في الكهرباء' },
-    // أضف باقي الدكاترة...
-  ],
-  changes: []  // سجل التعديلات (اتركه فارغ)
-};window.isAdmin = false;
-
-/* Helpers */
-function getInstructorName(id){ if(!id) return null; const i = DATA.instructors.find(x=>x.id===id); return i?i.name:null; }
+function saveTheme(theme){ localStorage.setItem(STORAGE_KEY_THEME, theme); }
+function loadTheme(){ return localStorage.getItem(STORAGE_KEY_THEME) || 'light'; }
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* Color per subject */
@@ -177,7 +203,7 @@ function genColor(title){
   return colorCache[title]; 
 }
 
-/* Render weekly table */
+/* Render weekly table (مع تعديل الوقت في الرأس إلى 12 ساعة) */
 function renderTable(){
   const container=document.getElementById('tableContainer'); 
   if(!container) return; 
@@ -190,15 +216,15 @@ function renderTable(){
   HOURS.forEach((h,idx)=>{
     const th=document.createElement('th'); 
     const next = HOURS[idx+1] || (h+1); 
-    const period = h>=12 ? 'م' : 'ص'; 
-    th.innerText = h + ' - ' + next + ' ' + period; 
+    // تعديل: استخدم displayHour لعرض 12 ساعة
+    th.innerText = displayHour(h) + ' - ' + displayHour(next); 
     headRow.appendChild(th); 
   });
   thead.appendChild(headRow); 
   table.appendChild(thead);
   const tbody=document.createElement('tbody');
   const map={};
-  (DATA.lectures||[]).forEach(l=>{ if(!l.day) return; map[l.day]=map[l.day]||[]; map[l.day].push(l); });
+  (DATA.lectures||[]).forEach(l=>{ if (!l.day) return; map[l.day]=map[l.day]||[]; map[l.day].push(l); });
   DAYS.forEach(day=>{
     const tr=document.createElement('tr'); 
     const dayCell=document.createElement('th'); 
@@ -221,7 +247,7 @@ function renderTable(){
       if(cell === 'skip') continue;
       const td=document.createElement('td');
       if(cell === null){
-        td.innerHTML = '<div class="slot empty">'+HOURS[i]+':00 — فارغ</div>';
+        td.innerHTML = '<div class="slot empty">'+displayHour(HOURS[i])+' — فارغ</div>'; // تعديل: استخدم displayHour هنا كمان
         tr.appendChild(td);
       } else {
         const maxSpan = Math.max(...cell.map(c=>c.span));
@@ -258,7 +284,7 @@ function renderTable(){
             a.style.marginTop='6px'; 
             div.appendChild(a); 
           }
-          // admin actions
+          // admin actions (مؤقتة في الذاكرة)
           if(window.isAdmin){
             const actions=document.createElement('div'); 
             actions.style.marginTop='6px'; 
@@ -273,9 +299,9 @@ function renderTable(){
               ev.stopPropagation(); 
               if(confirm('حذف المحاضرة؟')){ 
                 DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
-                saveData(DATA); 
                 renderAll(); 
                 recordChange('حُذفت المحاضرة: ' + lec.title); 
+                alert('التعديل مؤقت – سيختفي عند الـ refresh. للـ sharing، عدل الكود وارفع على GitHub.'); 
               } 
             };
             const editBtn=document.createElement('button'); 
@@ -319,10 +345,9 @@ function renderDaysTabs(){
     btn.onclick=()=> showDay(d); 
     daysTabs.appendChild(btn); 
   });
-    // activate today by default
-  const todayIndex = new Date().getDay(); // 0=الأحد, 1=الاثنين, ..., 6=السبت
-  // لأن DAYS تبدأ بالسبت (index 6), نحسب اليوم الحالي بناءً على ذلك
-  const today = DAYS[(todayIndex + 6) % 7]; // تحويل ليتناسب مع DAYS (السبت=0 في DAYS)
+  // activate today by default
+  const todayIndex = new Date().getDay(); 
+  const today = DAYS[(todayIndex + 6) % 7]; // تحويل ليتناسب مع DAYS (السبت=0)
   showDay(today);
 }
 
@@ -361,7 +386,7 @@ function showDay(day){
       a.style.marginTop='6px'; 
       card.appendChild(a); 
     }
-    // admin actions
+    // admin actions (مؤقتة)
     if(window.isAdmin){
       const actions = document.createElement('div'); 
       actions.style.marginTop='8px'; 
@@ -374,9 +399,9 @@ function showDay(day){
       delBtn.onclick=()=>{ 
         if(confirm('حذف المحاضرة؟')){ 
           DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
-          saveData(DATA); 
           renderAll(); 
           recordChange('حُذفت المحاضرة: '+lec.title); 
+          alert('التعديل مؤقت – سيختفي عند الـ refresh. للـ sharing، عدل الكود وارفع على GitHub.'); 
         } 
       };
       const editBtn = document.createElement('button'); 
@@ -393,6 +418,7 @@ function showDay(day){
 }
 
 /* Render instructors */
+function getInstructorName(id){ if(!id) return null; const i = DATA.instructors.find(x=>x.id===id); return i?i.name:null; }
 function renderInstructors(){ 
   const list=document.getElementById('instructorList'); 
   if(!list) return;
@@ -429,7 +455,7 @@ function isNowInLecture(lec){
   if(!lec) return false; 
   const now=new Date(); 
   const todayIndex = now.getDay(); 
-  const today = DAYS[(todayIndex + 6) % 7]; // مطابقة مع DAYS
+  const today = DAYS[(todayIndex + 6) % 7]; 
   if(lec.day !== today) return false; 
   const start=new Date(now); 
   start.setHours(lec.startHour, lec.startMin||0,0,0); 
@@ -438,42 +464,89 @@ function isNowInLecture(lec){
   return now>=start && now<end; 
 }
 
-function renderLiveNotice(){ 
-  const live=document.getElementById('liveNotice'); 
-  if(!live) return;
-  const now=new Date(); 
-  const todayIndex = now.getDay(); 
-  const today = DAYS[(todayIndex + 6) % 7]; 
-  const todays = (DATA.lectures||[]).filter(l=> l.day===today).map(l=>{ 
-    const s=new Date(now); 
-    s.setHours(l.startHour,l.startMin||0,0,0); 
-    return {l,s}; 
-  }).sort((a,b)=> a.s-b.s); 
-  const current = (DATA.lectures||[]).find(l=> isNowInLecture(l)); 
-  if(current){ 
-    live.innerText='🕒 الآن في محاضرة: ' + current.title; 
-    return; 
-  } 
-  if(todays.length>0){ 
-    const next = todays.find(t=> t.s>now); 
-    if(next) { 
-      live.innerText='⏳ المحاضرة القادمة اليوم: ' + next.l.title + ' بعد ' + timeRemaining(next.s); 
-    } else { 
-      live.innerText='لا توجد محاضرات لاحقة اليوم'; 
-    }
-    return; 
-  } 
-  live.innerText='لا توجد محاضرات الآن'; 
-}
+/* عداد الوقت المتقدم */
+let liveInterval; // متغير للـ interval الديناميكي
 
 function timeRemaining(targetDate){ 
   const diff = Math.max(0, targetDate - new Date()); 
-  const hrs = Math.floor(diff/3600000); 
-  const mins = Math.floor((diff%3600000)/60000); 
-  return (hrs>0? hrs+' ساعة ':'') + mins + ' دقيقة'; 
+  const hrs = Math.floor(diff / 3600000); 
+  const mins = Math.floor((diff % 3600000) / 60000); 
+  const secs = Math.floor((diff % 60000) / 1000); 
+  let timeStr = ''; 
+  if (hrs > 0) timeStr += hrs + ' ساعة '; 
+  if (mins > 0 || hrs > 0) timeStr += mins + ' دقيقة '; 
+  timeStr += secs + ' ثانية'; 
+  return timeStr.trim(); 
 }
 
-/* Admin UI */
+function renderLiveNotice(){ 
+  const live = document.getElementById('liveNotice'); 
+  if(!live) return;
+  
+  // أوقف الـ interval السابق لو موجود
+  if (liveInterval) clearInterval(liveInterval);
+  
+  const now = new Date(); 
+  const todayIndex = now.getDay(); 
+  const today = DAYS[(todayIndex + 6) % 7]; 
+  const todays = (DATA.lectures || []).filter(l => l.day === today).map(l => { 
+    const s = new Date(now); 
+    s.setHours(l.startHour, l.startMin || 0, 0, 0); 
+    return { l, s }; 
+  }).sort((a, b) => a.s - b.s); 
+  
+  const current = (DATA.lectures || []).find(l => isNowInLecture(l)); 
+  if (current) { 
+    live.innerHTML = '🕒 الآن في محاضرة: <strong>' + escapeHtml(current.title) + '</strong>'; 
+    live.classList.remove('live-countdown', 'upcoming-soon'); 
+    return; 
+  } 
+  
+  if (todays.length > 0) { 
+    const next = todays.find(t => t.s > now); 
+    if (next) { 
+      live.innerHTML = '⏳ المحاضرة القادمة: <strong>' + escapeHtml(next.l.title) + '</strong> بعد '; 
+      live.classList.add('live-countdown'); 
+      
+      function updateCountdown() {
+        const remaining = timeRemaining(next.s);
+        const countdownSpan = document.getElementById('countdown');
+        if (!countdownSpan) {
+          const span = document.createElement('span');
+          span.id = 'countdown';
+          live.appendChild(span);
+        }
+        document.getElementById('countdown').innerText = remaining;
+        
+        // لو الوقت أقل من 5 دقائق، أضف تأثير "قريب"
+        const diff = next.s - new Date();
+        if (diff < 300000) { // 5 دقائق
+          live.classList.add('upcoming-soon');
+        } else {
+          live.classList.remove('upcoming-soon');
+        }
+        
+        // أوقف العداد لو انتهى الوقت
+        if (diff <= 0) {
+          clearInterval(liveInterval);
+          renderLiveNotice(); // أعد التحديث
+        }
+      }
+      
+      updateCountdown(); // حدث مرة أولى
+      liveInterval = setInterval(updateCountdown, 1000); // كل ثانية
+      
+    } else { 
+      live.innerText = 'لا توجد محاضرات لاحقة اليوم'; 
+      live.classList.remove('live-countdown', 'upcoming-soon');
+    }
+    return; 
+  } 
+  live.innerText = 'لا توجد محاضرات الآن'; 
+  live.classList.remove('live-countdown', 'upcoming-soon');
+}
+
+/* Admin UI (مع أمان محسن) */
 function openAdminFlow(){ 
   const root=document.getElementById('modalRoot'); 
   if(!root) return;
@@ -482,7 +555,7 @@ function openAdminFlow(){
   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal'; 
-  m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور</p><input id="pw" class="input" type="password" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; 
+  m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور (للأدمن فقط)</p><input id="pw" class="input" type="password" placeholder="كلمة مرور سرية" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block'; 
@@ -499,15 +572,18 @@ function openAdminFlow(){
       openAdmin(); 
       updateAdminVisibility(); 
       recordChange('الأدمن دخل لوحة التحكم'); 
+      console.log('Admin login successful'); // log للأمان
     } else { 
       const pwEl=document.getElementById('pw'); 
       pwEl.style.animation='shake 0.3s'; 
       setTimeout(()=> pwEl.style.animation='',350); 
-      alert('كلمة المرور خاطئة'); 
+      alert('كلمة المرور خاطئة! الوصول محظور.'); 
+      console.log('Failed admin login attempt'); // log للأمان
     } 
   }; 
 }
 
+// باقي الدوال (openAdmin, renderAdminLectures, etc.) – نفس الكود السابق مع تعديلات بسيطة للـ alert المؤقت
 function openAdmin(){ 
   const root=document.getElementById('modalRoot'); 
   if(!root) return;
@@ -516,7 +592,7 @@ function openAdmin(){
   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal'; 
-  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ</button> <button id="closeBtn" class="btn">خروج</button></div></div><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
+  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة (مؤقتة)</h3><div><button id="saveBtn" class="btn">حفظ مؤقت</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات مؤقتة في الذاكرة – ستختفي عند الـ refresh. للـ sharing، عدل DATA في الكود وارفع على GitHub.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block'; 
@@ -527,22 +603,21 @@ function openAdmin(){
     updateAdminVisibility(); 
   }; 
   document.getElementById('saveBtn').onclick=()=>{ 
-    saveData(DATA); 
-    alert('تم الحفظ'); 
+    alert('التعديلات محفوظة مؤقتًا في الذاكرة. للـ sharing الدائم، عدل DATA في الكود وارفع على GitHub.'); 
     renderAll(); 
   }; 
   document.getElementById('tabLect').onclick=()=>{ 
-    document.querySelectorAll('#adminBody button').forEach(b=>b.classList.remove('active')); 
+    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
     this.classList.add('active'); 
     renderAdminLectures(); 
   }; 
   document.getElementById('tabInst').onclick=()=>{ 
-    document.querySelectorAll('#adminBody button').forEach(b=>b.classList.remove('active')); 
+    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
     this.classList.add('active'); 
     renderAdminInstructors(); 
   }; 
   document.getElementById('tabImp').onclick=()=>{ 
-    document.querySelectorAll('#adminBody button').forEach(b=>b.classList.remove('active')); 
+    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
     this.classList.add('active'); 
     renderAdminImportExport(); 
   }; 
@@ -552,12 +627,12 @@ function openAdmin(){
 function renderAdminLectures(){ 
   const body=document.getElementById('adminBody'); 
   if(!body) return;
-  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة محاضرة جديدة</h4></div>'; 
+  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة محاضرة جديدة (مؤقتة)</h4></div>'; 
   const form=document.createElement('form'); 
   const hourOptions=HOURS.map(h=>'<option value="'+h+'">'+to12(h)+'</option>').join(''); 
   const minuteOptions='<option value="0">00</option><option value="30">30</option>'; 
   const instOptions='<option value="">اختر دكتور (اختياري)</option>'+DATA.instructors.map(i=>'<option value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join(''); 
-  form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; 
+  form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة (مؤقت)</button></div>'; 
   body.appendChild(form); 
   form.onsubmit=(e)=>{ 
     e.preventDefault(); 
@@ -589,10 +664,10 @@ function renderAdminLectures(){
       link: '' 
     }; 
     DATA.lectures.push(lec); 
-    saveData(DATA); 
     recordChange('أُضيفت محاضرة جديدة: ' + lec.title); 
     renderAdminLectures(); 
     renderAll(); 
+    alert('تم الإضافة مؤقتًا في الذاكرة. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
   }; 
   const list=document.createElement('div'); 
   list.style.marginTop='12px'; 
@@ -614,11 +689,12 @@ function renderAdminLectures(){
     list.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', ()=>{ 
       const id=b.getAttribute('data-id'); 
       if(confirm('حذف المحاضرة؟')){ 
+        const lecTitle = DATA.lectures.find(x=>x.id===id)?.title || 'غير معروف'; 
         DATA.lectures = DATA.lectures.filter(x=> x.id !== id); 
-        saveData(DATA); 
         renderAdminLectures(); 
         renderAll(); 
-        recordChange('حُذفت محاضرة: ' + DATA.lectures.find(x=>x.id===id)?.title || 'غير معروف'); 
+        recordChange('حُذفت محاضرة: ' + lecTitle); 
+        alert('تم الحذف مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
       } 
     })); 
     // edit buttons
@@ -634,9 +710,9 @@ function renderAdminLectures(){
 function renderAdminInstructors(){ 
   const body=document.getElementById('adminBody'); 
   if(!body) return;
-  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة دكتور جديد</h4></div>'; 
+  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة دكتور جديد (مؤقت)</h4></div>'; 
   const form=document.createElement('form'); 
-  form.innerHTML='<div class="row><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور</button></div>'; 
+  form.innerHTML='<div class="row"><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور (مؤقت)</button></div>'; 
   body.appendChild(form); 
   form.onsubmit=(e)=>{ 
     e.preventDefault(); 
@@ -649,10 +725,10 @@ function renderAdminInstructors(){
     }; 
     if(!inst.name){ alert('اسم الدكتور مطلوب'); return; } 
     DATA.instructors.push(inst); 
-    saveData(DATA); 
     recordChange('أُضيف دكتور جديد: ' + inst.name); 
     renderAdminInstructors(); 
     renderAll(); 
+    alert('تم الإضافة مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
   }; 
   const list=document.createElement('div'); 
   list.style.marginTop='12px'; 
@@ -674,10 +750,10 @@ function renderAdminInstructors(){
       if(confirm('حذف الدكتور؟')){ 
         const instName = DATA.instructors.find(x=>x.id===id)?.name || ''; 
         DATA.instructors = DATA.instructors.filter(x=> x.id!==id); 
-        saveData(DATA); 
         renderAdminInstructors(); 
         renderAll(); 
         recordChange('حُذف الدكتور: ' + instName); 
+        alert('تم الحذف مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
       } 
     })); 
   } 
@@ -687,21 +763,22 @@ function renderAdminInstructors(){
 function renderAdminImportExport(){ 
   const body=document.getElementById('adminBody'); 
   if(!body) return;
-  body.innerHTML='<div style="margin-bottom:12px"><h4>استيراد/تصدير البيانات</h4></div>'; 
+  body.innerHTML='<div style="margin-bottom:12px"><h4>نسخ احتياطي محلي (JSON)</h4><p class="kv">للـ sharing الدائم، عدل DATA في الكود وارفع على GitHub.</p></div>'; 
   const exportBtn=document.createElement('button'); 
   exportBtn.className='btn'; 
-  exportBtn.innerText='تحميل JSON'; 
+  exportBtn.innerText='تحميل JSON (نسخة حالية)'; 
   exportBtn.onclick=()=>{ 
     const a=document.createElement('a'); 
     const blob=new Blob([JSON.stringify(DATA, null, 2)],{type:'application/json'}); 
     a.href=URL.createObjectURL(blob); 
     a.download='jadwal-v3-backup.json'; 
     a.click(); 
+    alert('استخدم هذا الملف لتعديل DATA في الكود، ثم ارفع على GitHub.'); 
   }; 
   const importBtn=document.createElement('button'); 
   importBtn.className='btn'; 
   importBtn.style.marginRight='8px'; 
-  importBtn.innerText='استيراد JSON'; 
+  importBtn.innerText='استيراد JSON (مؤقت)'; 
   importBtn.onclick=()=>{ 
     const inp=document.createElement('input'); 
     inp.type='file'; 
@@ -715,12 +792,10 @@ function renderAdminImportExport(){
           const newData = JSON.parse(reader.result); 
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
-            saveData(DATA); 
             renderAll(); 
-            alert('تم الاستيراد بنجاح'); 
-            recordChange('تم استيراد البيانات من ملف JSON'); 
+            alert('تم الاستيراد مؤقتًا في الذاكرة. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
           } else { 
-            alert('الملف غير صحيح (يجب أن يحتوي على lectures و instructors)'); 
+            alert('الملف غير صحيح'); 
           } 
         }catch(e){ 
           alert('ملف غير صحيح: ' + e.message); 
@@ -734,14 +809,13 @@ function renderAdminImportExport(){
   clearBtn.className='btn'; 
   clearBtn.style.background='red'; 
   clearBtn.style.color='white'; 
-  clearBtn.innerText='مسح كل البيانات'; 
+  clearBtn.innerText='مسح كل البيانات (مؤقت)'; 
   clearBtn.onclick=()=>{ 
-    if(confirm('هل أنت متأكد؟ سيتم مسح كل المحاضرات والدكاترة!')){ 
+    if(confirm('هل أنت متأكد؟ سيتم مسح كل المحاضرات والدكاترة مؤقتًا!')){ 
       DATA = {lectures:[], instructors:[], changes:[]}; 
-      saveData(DATA); 
       renderAll(); 
-      recordChange('تم مسح كل البيانات'); 
-      alert('تم المسح'); 
+      recordChange('تم مسح كل البيانات مؤقتًا'); 
+      alert('تم المسح مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
     } 
   }; 
   body.appendChild(importBtn); 
@@ -749,7 +823,7 @@ function renderAdminImportExport(){
   body.appendChild(clearBtn); 
 }
 
-/* Edit Modal */
+/* Edit Modal (مؤقت) */
 function openEditModal(lec){
   const root=document.getElementById('modalRoot'); 
   if(!root) return; 
@@ -759,11 +833,11 @@ function openEditModal(lec){
   const m=document.createElement('div'); 
   m.className='modal';
   const hourOptions=HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join(''); 
-  m.innerHTML = '<h3>تعديل المحاضرة</h3>';
+  m.innerHTML = '<h3>تعديل المحاضرة (مؤقت)</h3><p class="kv">التعديلات مؤقتة في الذاكرة.</p>';
   m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+hourOptions+'</select><select id="eStartM" class="input"><option '+((lec.startMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.startMin||0)===30?'selected':'')+' value="30">30</option></select></div></div></div>';
   m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select><select id="eEndM" class="input"><option '+((lec.endMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.endMin||0)===30?'selected':'')+' value="30">30</option></select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>';
   m.innerHTML += '<div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="eInst" class="input"><option value="">اختر دكتور (اختياري)</option>'+ (DATA.instructors.map(i=>'<option '+(i.id===lec.instructorId?'selected':'')+' value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join('')) + '</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="eLocation" class="input" value="'+escapeHtml(lec.location||'')+'" /></div></div>';
-  m.innerHTML += '<textarea id="eNotes" class="input">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل</button></div>';
+  m.innerHTML += '<textarea id="eNotes" class="input">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل (مؤقت)</button></div>';
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block';
@@ -800,23 +874,22 @@ function openEditModal(lec){
       DATA.lectures[idx].instructorId = inst;
       DATA.lectures[idx].location = loc;
       DATA.lectures[idx].notes = notes;
-      saveData(DATA);
       recordChange('تم تعديل المحاضرة: ' + title);
       renderAll();
+      alert('تم التعديل مؤقتًا في الذاكرة. للـ sharing، عدل DATA في الكود وارفع على GitHub.');
     }
     root.style.display='none'; 
     root.innerHTML='';
   };
 }
 
-/* Change log */
+/* Change log (مؤقت في الذاكرة) */
 function recordChange(msg){
   try{
     const now = new Date();
     DATA.changes = DATA.changes || [];
     DATA.changes.unshift({ts: now.toISOString(), msg: msg});
     if(DATA.changes.length>300) DATA.changes.length = 300;
-    saveData(DATA);
     renderChangeLog();
   }catch(e){ console.error('recordChange error:', e); }
 }
@@ -839,7 +912,7 @@ function renderChangeLog(){
       groups[d] = groups[d] || []; 
       groups[d].push(ch); 
     });
-    let html = '<h4>سجل التعديلات اليومية</h4>';
+    let html = '<h4>سجل التعديلات المؤقتة</h4><p class="kv">هذا السجل مؤقت ويختفي عند الـ refresh.</p>';
     if(Object.keys(groups).length===0) { 
       html += '<div class="kv">لم يتم إجراء تعديلات بعد</div>'; 
     } else {
@@ -857,13 +930,14 @@ function renderChangeLog(){
 }
 
 function updateAdminVisibility(){
-  // إخفاء/إظهار أزرار الإدارة في الجدول واليوم
-  document.querySelectorAll('.admin-only').forEach(el=> el.style.display = window.isAdmin ? 'inline-block' : 'none');
+  // إخفاء/إظهار أزرار الإدارة
+  const adminElements = document.querySelectorAll('.admin-only, .small-btn[onclick*="isAdmin"]');
+  adminElements.forEach(el => el.style.display = window.isAdmin ? 'inline-block' : 'none');
 }
 
-/* Export/Import/Print handlers */
+/* Export/Import/Print handlers (مع التركيز على النسخ الاحتياطي) */
 function initHandlers(){
-  // Export
+  // Export (للنسخ الاحتياطي لتعديل الكود)
   const exportBtn = document.getElementById('exportBtn');
   if(exportBtn) exportBtn.addEventListener('click', ()=>{ 
     const a=document.createElement('a'); 
@@ -871,9 +945,10 @@ function initHandlers(){
     a.href=URL.createObjectURL(blob); 
     a.download='jadwal-v3-backup.json'; 
     a.click(); 
+    alert('استخدم هذا الملف لتعديل DATA في الكود، ثم ارفع على GitHub للـ sharing.'); 
   });
 
-  // Import
+  // Import (مؤقت)
   const importBtn = document.getElementById('importBtn');
   if(importBtn) importBtn.addEventListener('click', ()=>{ 
     const inp=document.createElement('input'); 
@@ -888,9 +963,8 @@ function initHandlers(){
           const newData = JSON.parse(reader.result); 
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
-            saveData(DATA); 
             renderAll(); 
-            alert('تم الاستيراد بنجاح'); 
+            alert('تم الاستيراد مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
           } else { 
             alert('الملف غير صحيح'); 
           } 
@@ -903,7 +977,7 @@ function initHandlers(){
     inp.click(); 
   });
 
-  // Print
+  // Print (مع styles محسنة)
   const printBtn = document.getElementById('printBtn');
   if(printBtn) printBtn.addEventListener('click', ()=>{ 
     const w=window.open('','_blank'); 
@@ -921,19 +995,22 @@ function initHandlers(){
     setTimeout(()=>{ w.print(); }, 500); 
   });
 
-  // Admin
+  // Admin (مع أمان)
   const adminBtn = document.getElementById('adminBtn');
   if(adminBtn) adminBtn.addEventListener('click', openAdminFlow);
 
-  // Theme toggle (simple, without full dark mode implementation)
+  // Theme toggle (محلي لكل مستخدم)
   const themeToggle = document.getElementById('themeToggle');
   if(themeToggle) themeToggle.addEventListener('click', ()=>{ 
-    document.documentElement.toggleAttribute('data-theme', 'dark'); 
-    localStorage.setItem('theme', document.documentElement.hasAttribute('data-theme') ? 'dark' : 'light'); 
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', newTheme);
+    saveTheme(newTheme);
   });
 
   // Load theme
-  if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  const savedTheme = loadTheme();
+  if(savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 }
 
 /* Tab switching */
@@ -962,19 +1039,18 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initHandlers(); 
   initTabs(); 
   renderAll(); 
-  // Autosave every 30s
-  setInterval(()=>{ saveData(DATA); }, 30000);   // Refresh live notice every minute
+  // حدث الإشعار كل دقيقة للكشف عن تغييرات جديدة (العداد الداخلي كل ثانية)
   setInterval(renderLiveNotice, 60000);
 });
 
-// expose API (for external use if needed)
+// expose API (للاستخدام الخارجي إذا لزم)
 window.jadwal_v3 = { 
   data:()=>JSON.stringify(DATA), 
   clear:()=>{ 
-    if(confirm('مسح كل البيانات؟')){ 
+    if(confirm('مسح كل البيانات مؤقتًا؟')){ 
       DATA={lectures:[], instructors:[], changes:[]}; 
-      saveData(DATA); 
       renderAll(); 
+      alert('تم المسح مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
     } 
   } 
 };
