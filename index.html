@@ -216,7 +216,6 @@ function renderTable(){
   table.appendChild(tbody); container.appendChild(table); try{ renderLegend(); }catch(e){}; try{ renderLiveNotice(); }catch(e){};
   renderChangeLog();
 }
-);
   thead.appendChild(headRow); table.appendChild(thead);
   const tbody=document.createElement('tbody'); const map={};
   DATA.lectures.forEach(l=>{ if(!l.day) return; if(!map[l.day]) map[l.day]=[]; map[l.day].push(l); });
