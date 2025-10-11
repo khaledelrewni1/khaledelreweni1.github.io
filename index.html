@@ -5,16 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>📘 جدول المحاضرات</title>
 <link rel="icon" href="icons/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --accent1:#60a5fa; --accent2:#7c3aed;
   --bg-grad: linear-gradient(90deg,var(--accent1),var(--accent2));
   --card:#ffffff; --text:#071127; --muted:#475569;
   --cell-border: rgba(2,6,23,0.06);
+  --th-bg: rgba(0,0,0,0.03);
 }
 [data-theme="dark"]{
   --card:#071127; --text:#e6eef8; --muted:#9ca3af; --cell-border: rgba(255,255,255,0.06);
   --bg-grad: linear-gradient(90deg,#0f172a,#0b1220);
+  --th-bg: rgba(255,255,255,0.06);
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var(--text);min-height:100vh}
@@ -34,7 +37,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 .table-wrap{overflow:auto}
 .table{width:100%;border-collapse:collapse;background:var(--card);border-radius:8px;overflow:hidden}
 .table th, .table td{border:1px solid var(--cell-border);padding:10px;text-align:center;font-size:14px}
-.table th{background:rgba(0,0,0,0.03);font-weight:800}
+.table th{background:var(--th-bg);font-weight:800}
 .slot{padding:6px;border-radius:6px}
 .slot .meta{font-size:12px;color:var(--muted);margin-top:6px}
 .empty{opacity:0.45}
@@ -58,6 +61,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
   .table th, .table td{font-size:12px;padding:8px}
 }
 .notice-small{font-size:13px;color:rgba(255,255,255,0.9);opacity:0.95;margin-top:6px}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 </style>
 </head>
 <body>
@@ -124,7 +128,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 
 <script>
 /* Config */
-const ADMIN_PASSWORD = 'khaled181';
+const ADMIN_PASSWORD = 'admin123'; // غيرها لشيء أقوى في الاستخدام الفعلي
 const STORAGE_KEY = 'jadwal_v3_data';
 const DAYS = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
 const HOURS = Array.from({length:15},(_,i)=>8+i);
@@ -134,35 +138,60 @@ function to12(h){ const period = h>=12 ? 'م' : 'ص'; let hh = h%12; if(hh===0) 
 function to12WithMin(h,m){ const hour = parseInt(h,10); const period = hour>=12 ? 'م' : 'ص'; let hh = hour%12; if(hh===0) hh=12; return hh + ':' + String(m).padStart(2,'0') + ' ' + period; }
 
 /* Data storage */
-function uid(){ return 'id'+Math.random().toString(36).slice(2,9); }
-function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {lectures:[], instructors:[]}; }catch(e){ return {lectures:[], instructors:[]}; } }
-function saveData(d){ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
+function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,9); }
+function loadData(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {lectures:[], instructors:[], changes:[]}; }catch(e){ console.error('loadData error:', e); return {lectures:[], instructors:[], changes:[]}; } }
+function saveData(d){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }catch(e){ console.error('saveData error:', e); } }
 
 let DATA = loadData();
+window.isAdmin = false;
 
 /* Helpers */
 function getInstructorName(id){ if(!id) return null; const i = DATA.instructors.find(x=>x.id===id); return i?i.name:null; }
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function escapeAttr(s){ if(!s) return ''; return String(s).replace(/"/g,'&quot;'); }
 
 /* Color per subject */
 const colorCache={};
-function genColor(title){ if(!title) return {bg:'rgba(243,244,246,0.6)',solid:'#e5e7eb'}; if(colorCache[title]) return colorCache[title]; let h=0; for(let i=0;i<title.length;i++){ h=(h<<5)-h+title.charCodeAt(i); h|=0; } const r=Math.abs(h)%200+20; const g=(Math.abs(h*13)%150)+80; const b=(Math.abs(h*7)%180)+40; const bg='rgba('+r+','+g+','+b+',0.18)'; const solid='rgba('+r+','+g+','+b+',0.95)'; colorCache[title]={bg,solid}; return colorCache[title]; }
+function genColor(title){ 
+  if(!title) return {bg:'rgba(243,244,246,0.6)',solid:'#e5e7eb'}; 
+  if(colorCache[title]) return colorCache[title]; 
+  let h=0; 
+  for(let i=0;i<title.length;i++){ h=(h<<5)-h+title.charCodeAt(i); h|=0; } 
+  const r=Math.abs(h)%200+20; 
+  const g=(Math.abs(h*13)%150)+80; 
+  const b=(Math.abs(h*7)%180)+40; 
+  const bg='rgba('+r+','+g+','+b+',0.18)'; 
+  const solid='rgba('+r+','+g+','+b+',0.95)'; 
+  colorCache[title]={bg,solid}; 
+  return colorCache[title]; 
+}
 
-
-/* Render weekly table (merged cells, admin edit/delete, hour labels like "8 - 9 ص") */
+/* Render weekly table */
 function renderTable(){
-  const container=document.getElementById('tableContainer'); if(!container) return; container.innerHTML='';
-  const table=document.createElement('table'); table.className='table';
-  const thead=document.createElement('thead'); const headRow=document.createElement('tr'); headRow.appendChild(document.createElement('th'));
-  HOURS.forEach((h,idx)=>{ const th=document.createElement('th'); const next = HOURS[idx+1] || (h+1); const period = h>=12 ? 'م' : 'ص'; th.innerText = h + ' - ' + next + ' ' + period; headRow.appendChild(th); });
-  thead.appendChild(headRow); table.appendChild(thead);
+  const container=document.getElementById('tableContainer'); 
+  if(!container) return; 
+  container.innerHTML='';
+  const table=document.createElement('table'); 
+  table.className='table';
+  const thead=document.createElement('thead'); 
+  const headRow=document.createElement('tr'); 
+  headRow.appendChild(document.createElement('th'));
+  HOURS.forEach((h,idx)=>{
+    const th=document.createElement('th'); 
+    const next = HOURS[idx+1] || (h+1); 
+    const period = h>=12 ? 'م' : 'ص'; 
+    th.innerText = h + ' - ' + next + ' ' + period; 
+    headRow.appendChild(th); 
+  });
+  thead.appendChild(headRow); 
+  table.appendChild(thead);
   const tbody=document.createElement('tbody');
   const map={};
   (DATA.lectures||[]).forEach(l=>{ if(!l.day) return; map[l.day]=map[l.day]||[]; map[l.day].push(l); });
   DAYS.forEach(day=>{
-    const tr=document.createElement('tr'); const dayCell=document.createElement('th'); dayCell.innerText=day; tr.appendChild(dayCell);
-    // occupancy
+    const tr=document.createElement('tr'); 
+    const dayCell=document.createElement('th'); 
+    dayCell.innerText=day; 
+    tr.appendChild(dayCell);
     const occ = new Array(HOURS.length).fill(null);
     (map[day]||[]).forEach(l=>{
       const startNum = l.startHour + ((l.startMin||0)/60);
@@ -189,143 +218,586 @@ function renderTable(){
         cell.forEach(cobj=>{
           const lec = cobj.lec;
           const col = genColor(lec.title);
-          const div=document.createElement('div'); div.className='slot'; div.style.background = col.bg; div.style.borderRadius='8px'; div.style.padding='6px'; div.style.marginBottom='6px';
-          const title=document.createElement('div'); title.style.fontWeight='800'; title.style.color=col.solid; title.innerText = lec.title;
-          const meta=document.createElement('div'); meta.className='meta'; meta.innerText = (getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
-          const timeEl=document.createElement('div'); timeEl.className='meta'; timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
-          div.appendChild(title); div.appendChild(meta); div.appendChild(timeEl);
-          if(lec.link){ const a=document.createElement('a'); a.href=lec.link; a.target='_blank'; a.innerText='رابط المحاضرة'; a.style.display='block'; a.style.marginTop='6px'; div.appendChild(a); }
+          const div=document.createElement('div'); 
+          div.className='slot'; 
+          div.style.background = col.bg; 
+          div.style.borderRadius='8px'; 
+          div.style.padding='6px'; 
+          div.style.marginBottom='6px';
+          const title=document.createElement('div'); 
+          title.style.fontWeight='800'; 
+          title.style.color=col.solid; 
+          title.innerText = lec.title;
+          const meta=document.createElement('div'); 
+          meta.className='meta'; 
+          meta.innerText = (getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
+          const timeEl=document.createElement('div'); 
+          timeEl.className='meta'; 
+          timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
+          div.appendChild(title); 
+          div.appendChild(meta); 
+          div.appendChild(timeEl);
+          if(lec.link){ 
+            const a=document.createElement('a'); 
+            a.href=lec.link; 
+            a.target='_blank'; 
+            a.innerText='رابط المحاضرة'; 
+            a.style.display='block'; 
+            a.style.marginTop='6px'; 
+            div.appendChild(a); 
+          }
           // admin actions
-          const actions=document.createElement('div'); actions.style.marginTop='6px'; actions.style.display='flex'; actions.style.justifyContent='flex-end'; actions.style.gap='6px';
-          const delBtn=document.createElement('button'); delBtn.className='small-btn admin-only'; delBtn.title='حذف'; delBtn.innerText='🗑️';
-          delBtn.onclick = function(ev){ ev.stopPropagation(); if(window.isAdmin){ if(confirm('حذف المحاضرة؟')){ DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); saveData(DATA); renderAll(); recordChange('حُذفت المحاضرة: '+lec.title); } } };
-          const editBtn=document.createElement('button'); editBtn.className='small-btn admin-only'; editBtn.title='تعديل'; editBtn.innerText='✏️';
-          editBtn.onclick = function(ev){ ev.stopPropagation(); if(window.isAdmin) openEditModal(lec); };
-          if(!window.isAdmin){ delBtn.style.display='none'; editBtn.style.display='none'; }
-          actions.appendChild(editBtn); actions.appendChild(delBtn);
-          div.appendChild(actions);
+          if(window.isAdmin){
+            const actions=document.createElement('div'); 
+            actions.style.marginTop='6px'; 
+            actions.style.display='flex'; 
+            actions.style.justifyContent='flex-end'; 
+            actions.style.gap='6px';
+            const delBtn=document.createElement('button'); 
+            delBtn.className='small-btn'; 
+            delBtn.title='حذف'; 
+            delBtn.innerText='🗑️';
+            delBtn.onclick = (ev)=>{ 
+              ev.stopPropagation(); 
+              if(confirm('حذف المحاضرة؟')){ 
+                DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
+                saveData(DATA); 
+                renderAll(); 
+                recordChange('حُذفت المحاضرة: ' + lec.title); 
+              } 
+            };
+            const editBtn=document.createElement('button'); 
+            editBtn.className='small-btn'; 
+            editBtn.title='تعديل'; 
+            editBtn.innerText='✏️';
+            editBtn.onclick = (ev)=>{ 
+              ev.stopPropagation(); 
+              openEditModal(lec); 
+            };
+            actions.appendChild(editBtn); 
+            actions.appendChild(delBtn);
+            div.appendChild(actions);
+          }
           if(isNowInLecture(lec)) div.classList.add('current');
           box.appendChild(div);
         });
-        td.appendChild(box); tr.appendChild(td);
+        td.appendChild(box); 
+        tr.appendChild(td);
         i += ((td.colSpan||1)-1);
       }
     }
     tbody.appendChild(tr);
   });
-  table.appendChild(tbody); container.appendChild(table); try{ renderLegend(); }catch(e){}; try{ renderLiveNotice(); }catch(e){};
+  table.appendChild(tbody); 
+  container.appendChild(table); 
+  renderLegend();
+  renderLiveNotice();
   renderChangeLog();
-}
-  thead.appendChild(headRow); table.appendChild(thead);
-  const tbody=document.createElement('tbody'); const map={};
-  DATA.lectures.forEach(l=>{ if(!l.day) return; if(!map[l.day]) map[l.day]=[]; map[l.day].push(l); });
-  DAYS.forEach(day=>{ const tr=document.createElement('tr'); const dayCell=document.createElement('th'); dayCell.innerText=day; tr.appendChild(dayCell);
-    HOURS.forEach(h=>{ const td=document.createElement('td'); const lectures=(map[day]||[]).filter(l=>{ const start=l.startHour+(l.startMin||0)/60; const end=l.endHour+(l.endMin||0)/60; return start<=h && h<end; });
-      if(lectures.length===0){ td.innerHTML='<div class="slot empty">'+h+':00 — فارغ</div>'; }
-      else{
-        // if multiple lectures (different instructors same subject), list them stacked
-        const box=document.createElement('div');
-        lectures.forEach(lec=>{ const col=genColor(lec.title); const div=document.createElement('div'); div.className='slot'; div.style.background=col.bg; div.style.borderRadius='8px'; div.style.padding='6px'; div.style.marginBottom='6px'; const title=document.createElement('div'); title.style.fontWeight='800'; title.style.color=col.solid; title.innerText=lec.title; const meta=document.createElement('div'); meta.className='meta'; meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد')); const timeEl=document.createElement('div'); timeEl.className='meta'; timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0); div.appendChild(title); div.appendChild(meta); div.appendChild(timeEl); if(lec.link){ const a=document.createElement('a'); a.href=lec.link; a.target='_blank'; a.innerText='رابط المحاضرة'; a.style.display='block'; a.style.marginTop='6px'; div.appendChild(a); } if(isNowInLecture(lec)) div.classList.add('current'); box.appendChild(div); });
-        td.appendChild(box);
-      }
-      tr.appendChild(td);
-    });
-    tbody.appendChild(tr);
-  });
-  table.appendChild(tbody); container.appendChild(table); renderLegend();
 }
 
 /* Render day tabs and day view */
 function renderDaysTabs(){
-  const daysTabs=document.getElementById('daysTabs'); daysTabs.innerHTML='';
-  DAYS.forEach(d=>{ const btn=document.createElement('button'); btn.className='day-tab'; btn.innerText=d; btn.onclick=()=> showDay(d); daysTabs.appendChild(btn); });
-  // activate today by default
-  const jsWeek=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']; const today=jsWeek[new Date().getDay()];
+  const daysTabs=document.getElementById('daysTabs'); 
+  if(!daysTabs) return;
+  daysTabs.innerHTML='';
+  DAYS.forEach(d=>{ 
+    const btn=document.createElement('button'); 
+    btn.className='day-tab'; 
+    btn.innerText=d; 
+    btn.onclick=()=> showDay(d); 
+    daysTabs.appendChild(btn); 
+  });
+    // activate today by default
+  const todayIndex = new Date().getDay(); // 0=الأحد, 1=الاثنين, ..., 6=السبت
+  // لأن DAYS تبدأ بالسبت (index 6), نحسب اليوم الحالي بناءً على ذلك
+  const today = DAYS[(todayIndex + 6) % 7]; // تحويل ليتناسب مع DAYS (السبت=0 في DAYS)
   showDay(today);
 }
 
 function showDay(day){
   document.querySelectorAll('.day-tab').forEach(b=> b.classList.toggle('active', b.innerText===day));
-  const container=document.getElementById('dayContainer'); container.innerHTML='';
+  const container=document.getElementById('dayContainer'); 
+  if(!container) return;
+  container.innerHTML='';
   const lectures=(DATA.lectures||[]).filter(l=> l.day===day).sort((a,b)=> (a.startHour+(a.startMin||0)/60)-(b.startHour+(b.startMin||0)/60));
-  if(lectures.length===0){ container.innerHTML='<div class="card">لا توجد محاضرات لهذا اليوم</div>'; return; }
+  if(lectures.length===0){ 
+    container.innerHTML='<div class="card">لا توجد محاضرات لهذا اليوم</div>'; 
+    return; 
+  }
   lectures.forEach(lec=>{
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px';
-    const title=document.createElement('div'); title.style.fontWeight='800'; title.innerText=lec.title;
-    const meta=document.createElement('div'); meta.className='kv'; meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
-    const timeEl=document.createElement('div'); timeEl.className='kv'; timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
-    card.appendChild(title); card.appendChild(meta); card.appendChild(timeEl);
-    if(lec.link){ const a=document.createElement('a'); a.href=lec.link; a.target='_blank'; a.innerText='رابط المحاضرة'; a.style.display='block'; a.style.marginTop='6px'; card.appendChild(a); }
+    const card=document.createElement('div'); 
+    card.className='card'; 
+    card.style.marginBottom='8px';
+    const title=document.createElement('div'); 
+    title.style.fontWeight='800'; 
+    title.innerText=lec.title;
+    const meta=document.createElement('div'); 
+    meta.className='kv'; 
+    meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
+    const timeEl=document.createElement('div'); 
+    timeEl.className='kv'; 
+    timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
+    card.appendChild(title); 
+    card.appendChild(meta); 
+    card.appendChild(timeEl);
+    if(lec.link){ 
+      const a=document.createElement('a'); 
+      a.href=lec.link; 
+      a.target='_blank'; 
+      a.innerText='رابط المحاضرة'; 
+      a.style.display='block'; 
+      a.style.marginTop='6px'; 
+      card.appendChild(a); 
+    }
     // admin actions
-    const actions = document.createElement('div'); actions.style.marginTop='8px'; actions.style.display='flex'; actions.style.justifyContent='flex-end'; actions.style.gap='6px';
-    const delBtn = document.createElement('button'); delBtn.className='small-btn admin-only'; delBtn.innerText='🗑️'; delBtn.onclick=()=>{ if(window.isAdmin && confirm('حذف المحاضرة؟')){ DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); saveData(DATA); renderAll(); recordChange('حُذفت المحاضرة: '+lec.title); } };
-    const editBtn = document.createElement('button'); editBtn.className='small-btn admin-only'; editBtn.innerText='✏️'; editBtn.onclick=()=>{ if(window.isAdmin) openEditModal(lec); };
-    if(!window.isAdmin){ delBtn.style.display='none'; editBtn.style.display='none'; }
-    actions.appendChild(editBtn); actions.appendChild(delBtn); card.appendChild(actions);
-    if(isNowInLecture(lec)) card.classList.add('current');
-    container.appendChild(card);
-  });
-}
-lectures.forEach(lec=>{
-    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='8px';
-    const title=document.createElement('div'); title.style.fontWeight='800'; title.innerText=lec.title;
-    const meta=document.createElement('div'); meta.className='kv'; meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
-    const timeEl=document.createElement('div'); timeEl.className='kv'; timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
-    card.appendChild(title); card.appendChild(meta); card.appendChild(timeEl); if(lec.link){ const a=document.createElement('a'); a.href=lec.link; a.target='_blank'; a.innerText='رابط المحاضرة'; a.style.display='block'; a.style.marginTop='6px'; card.appendChild(a); }
+    if(window.isAdmin){
+      const actions = document.createElement('div'); 
+      actions.style.marginTop='8px'; 
+      actions.style.display='flex'; 
+      actions.style.justifyContent='flex-end'; 
+      actions.style.gap='6px';
+      const delBtn = document.createElement('button'); 
+      delBtn.className='small-btn'; 
+      delBtn.innerText='🗑️'; 
+      delBtn.onclick=()=>{ 
+        if(confirm('حذف المحاضرة؟')){ 
+          DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
+          saveData(DATA); 
+          renderAll(); 
+          recordChange('حُذفت المحاضرة: '+lec.title); 
+        } 
+      };
+      const editBtn = document.createElement('button'); 
+      editBtn.className='small-btn'; 
+      editBtn.innerText='✏️'; 
+      editBtn.onclick=()=>{ openEditModal(lec); };
+      actions.appendChild(editBtn); 
+      actions.appendChild(delBtn); 
+      card.appendChild(actions);
+    }
     if(isNowInLecture(lec)) card.classList.add('current');
     container.appendChild(card);
   });
 }
 
 /* Render instructors */
-function renderInstructors(){ const list=document.getElementById('instructorList'); list.innerHTML=''; if(DATA.instructors.length===0){ list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; return; } DATA.instructors.forEach(i=>{ const c=document.createElement('div'); c.className='card'; c.innerHTML='<div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div>' + (i.subjects?('<div class="kv">المواد: '+escapeHtml(i.subjects.join(', '))+'</div>'):''); list.appendChild(c); }); }
+function renderInstructors(){ 
+  const list=document.getElementById('instructorList'); 
+  if(!list) return;
+  list.innerHTML=''; 
+  if(DATA.instructors.length===0){ 
+    list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; 
+    return; 
+  } 
+  DATA.instructors.forEach(i=>{ 
+    const c=document.createElement('div'); 
+    c.className='card'; 
+    c.innerHTML='<div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div>' + (i.subjects?('<div class="kv">المواد: '+escapeHtml(i.subjects.join(', '))+'</div>'):''); 
+    list.appendChild(c); 
+  }); 
+}
 
 /* Legend */
-function renderLegend(){ const legend=document.getElementById('legend'); legend.innerHTML=''; const titles=Array.from(new Set(DATA.lectures.map(l=>l.title).filter(Boolean))); titles.forEach(t=>{ const el=document.createElement('div'); el.className='legend-item'; const col=genColor(t); el.innerHTML='<span style="display:inline-block;width:12px;height:12px;background:'+col.solid+';border-radius:4px;margin-left:8px"></span>'+escapeHtml(t); legend.appendChild(el); }); }
-
-/* genColor */
-function genColor(title){ if(!title) return {bg:'rgba(243,244,246,0.6)',solid:'#e5e7eb'}; if(colorCache[title]) return colorCache[title]; let h=0; for(let i=0;i<title.length;i++){ h=(h<<5)-h+title.charCodeAt(i); h|=0; } const r=Math.abs(h)%200+20; const g=(Math.abs(h*13)%150)+80; const b=(Math.abs(h*7)%180)+40; const bg='rgba('+r+','+g+','+b+',0.18)'; const solid='rgba('+r+','+g+','+b+',0.95)'; colorCache[title]={bg,solid}; return colorCache[title]; }
-
-/* Admin UI (password -> admin panel) */
-
-function openAdminFlow(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal'; m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور</p><input id="pw" class="input" type="password" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; wrap.appendChild(m); root.appendChild(wrap); root.style.display='block'; document.getElementById('cancelPw').onclick=()=>{ root.style.display='none'; root.innerHTML=''; }; document.getElementById('submitPw').onclick=()=>{ const v=document.getElementById('pw').value; if(v===ADMIN_PASSWORD){ window.isAdmin = true; root.style.display='none'; root.innerHTML=''; openAdmin(); updateAdminVisibility(); recordChange(\"الأدمن دخل لوحة التحكم\"); } else { const pwEl=document.getElementById('pw'); pwEl.style.animation='shake 0.3s'; setTimeout(()=> pwEl.style.animation='',350); } }; }
-; document.getElementById('submitPw').onclick=()=>{ const v=document.getElementById('pw').value; if(v===ADMIN_PASSWORD){ root.style.display='none'; root.innerHTML=''; openAdmin(); } else alert('كلمة المرور خاطئة'); }; }
-
-
-function openAdmin(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal'; m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ</button> <button id="closeBtn" class="btn">خروج</button></div></div><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; wrap.appendChild(m); root.appendChild(wrap); root.style.display='block'; document.getElementById('closeBtn').onclick=()=>{ root.style.display='none'; root.innerHTML=''; }; document.getElementById('saveBtn').onclick=()=>{ saveData(DATA); /* silent save */ renderAll(); }; document.getElementById('tabLect').onclick=()=> renderAdminLectures(); document.getElementById('tabInst').onclick=()=> renderAdminInstructors(); document.getElementById('tabImp').onclick=()=> renderAdminImportExport(); renderAdminLectures(); }
-; document.getElementById('saveBtn').onclick=()=>{ saveData(DATA); alert('تم الحفظ'); renderAll(); }; document.getElementById('tabLect').onclick=()=> renderAdminLectures(); document.getElementById('tabInst').onclick=()=> renderAdminInstructors(); document.getElementById('tabImp').onclick=()=> renderAdminImportExport(); renderAdminLectures(); }
-
-function renderAdminLectures(){ const body=document.getElementById('adminBody'); body.innerHTML=''; const form=document.createElement('form'); const hourOptions=HOURS.map(h=>'<option value="'+h+'">'+to12(h)+'</option>').join(''); const minuteOptions='<option value=\"0\">00</option><option value=\"30\">30</option>'; const instOptions='<option value=\"\">اختر دكتور (اختياري)</option>'+DATA.instructors.map(i=>'<option value=\"'+i.id+'\">'+escapeHtml(i.name)+'</option>').join(''); form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; body.appendChild(form); form.onsubmit=(e)=>{ e.preventDefault(); const day=document.getElementById('fDay').value; const sh=+document.getElementById('fStartH').value; const sm=+document.getElementById('fStartM').value; const eh=+document.getElementById('fEndH').value; const em=+document.getElementById('fEndM').value; let startNum=sh + (sm>0?0.5:0); let endNum=eh + (em>0?0.5:0); if(endNum<=startNum) endNum = startNum + 1; const startHour=Math.floor(startNum); const endHour=Math.ceil(endNum); const lec={ id: uid(), day, startHour, startMin: sm, endHour, endMin: em, title: document.getElementById('fTitle').value.trim(), instructorId: document.getElementById('fInst').value || null, instructorName: null, location: document.getElementById('fLocation').value.trim(), notes: document.getElementById('fNotes').value.trim(), link: '' }; DATA.lectures.push(lec); saveData(DATA); renderAdminLectures(); renderAll(); }; const list=document.createElement('div'); list.style.marginTop='12px'; if(DATA.lectures.length===0) list.innerHTML='<div class="card">لا توجد محاضرات بعد</div>'; else{ const ul=document.createElement('div'); ul.style.display='grid'; ul.style.gap='8px'; DATA.lectures.forEach(l=>{ const el=document.createElement('div'); el.className='card'; const instName=getInstructorName(l.instructorId) || l.instructorName || ''; el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(l.title)+'</div><div class="kv">'+escapeHtml(l.day)+' '+to12WithMin(l.startHour,l.startMin)+' — '+to12WithMin(l.endHour,l.endMin)+' • '+escapeHtml(instName)+'</div></div><div><button class="btn" data-id="'+l.id+'">حذف</button></div></div>'; ul.appendChild(el); }); list.appendChild(ul); list.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-id'); if(confirm('حذف المحاضرة؟')){ DATA.lectures = DATA.lectures.filter(x=> x.id !== id); saveData(DATA); renderAdminLectures(); renderAll(); } })); } body.appendChild(list); }
-
-function renderAdminInstructors(){ const body=document.getElementById('adminBody'); body.innerHTML=''; const form=document.createElement('form'); form.innerHTML='<div class="row"><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور</button></div>'; body.appendChild(form); form.onsubmit=(e)=>{ e.preventDefault(); const inst={ id: uid(), name: document.getElementById('iName').value.trim(), title: document.getElementById('iTitle').value.trim(), subjects: document.getElementById('iSubjects').value.split(',').map(s=>s.trim()).filter(Boolean), bio: document.getElementById('iBio').value.trim() }; DATA.instructors.push(inst); saveData(DATA); renderAdminInstructors(); renderAll(); }; const list=document.createElement('div'); list.style.marginTop='12px'; if(DATA.instructors.length===0) list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; else{ const ul=document.createElement('div'); ul.style.display='grid'; ul.style.gap='8px'; DATA.instructors.forEach(i=>{ const el=document.createElement('div'); el.className='card'; el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div></div><div><button class="btn" data-id="'+i.id+'">حذف</button></div></div>'; ul.appendChild(el); }); list.appendChild(ul); list.querySelectorAll('button').forEach(b=> b.addEventListener('click', ()=>{ const id=b.getAttribute('data-id'); if(confirm('حذف الدكتور؟')){ DATA.instructors = DATA.instructors.filter(x=> x.id!==id); saveData(DATA); renderAdminInstructors(); renderAll(); } })); } body.appendChild(list); }
-
-function renderAdminImportExport(){ const body=document.getElementById('adminBody'); body.innerHTML=''; const exportBtn=document.createElement('button'); exportBtn.className='btn'; exportBtn.innerText='تحميل JSON'; exportBtn.onclick=()=>{ const a=document.createElement('a'); const blob=new Blob([JSON.stringify(DATA)],{type:'application/json'}); a.href=URL.createObjectURL(blob); a.download='jadwal-v3-backup.json'; a.click(); }; const importBtn=document.createElement('button'); importBtn.className='btn'; importBtn.style.marginLeft='8px'; importBtn.innerText='استيراد JSON'; importBtn.onclick=()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange=()=>{ const f=inp.files[0]; const reader=new FileReader(); reader.onload=()=>{ try{ DATA = JSON.parse(reader.result); saveData(DATA); renderAll(); alert('تم الاستيراد'); }catch(e){ alert('ملف غير صحيح'); } }; reader.readAsText(f); }; inp.click(); }; body.appendChild(exportBtn); body.appendChild(importBtn); body.appendChild(document.createElement('div')); }
-
-/* Admin flow */
-function openAdminFlowHandlers(){ document.getElementById('adminBtn').addEventListener('click', ()=> openAdminFlow()); }
-document.addEventListener('DOMContentLoaded', ()=> openAdminFlowHandlers());
-
-function openAdminFlow(){ const root=document.getElementById('modalRoot'); root.innerHTML=''; const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal'; m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور</p><input id="pw" class="input" type="password" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; wrap.appendChild(m); root.appendChild(wrap); root.style.display='block'; document.getElementById('cancelPw').onclick=()=>{ root.style.display='none'; root.innerHTML=''; }; document.getElementById('submitPw').onclick=()=>{ const v=document.getElementById('pw').value; if(v===ADMIN_PASSWORD){ root.style.display='none'; root.innerHTML=''; openAdmin(); } else alert('كلمة المرور خاطئة'); }; }
+function renderLegend(){ 
+  const legend=document.getElementById('legend'); 
+  if(!legend) return;
+  legend.innerHTML=''; 
+  const titles=Array.from(new Set(DATA.lectures.map(l=>l.title).filter(Boolean))); 
+  titles.forEach(t=>{ 
+    const el=document.createElement('div'); 
+    el.className='legend-item'; 
+    const col=genColor(t); 
+    el.innerHTML='<span style="display:inline-block;width:12px;height:12px;background:'+col.solid+';border-radius:4px;margin-left:8px"></span>'+escapeHtml(t); 
+    legend.appendChild(el); 
+  }); 
+}
 
 /* Live check */
-function isNowInLecture(lec){ if(!lec) return false; const now=new Date(); const jsWeek=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']; const todayName=jsWeek[now.getDay()]; if(lec.day !== todayName) return false; const start=new Date(); start.setHours(lec.startHour, lec.startMin||0,0,0); const end=new Date(); end.setHours(lec.endHour, lec.endMin||0,0,0); return now>=start && now<end; }
-function renderLiveNotice(){ const live=document.getElementById('liveNotice'); const now=new Date(); const jsWeek=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت']; const todayName=jsWeek[now.getDay()]; const todays = (DATA.lectures||[]).filter(l=> l.day===todayName).map(l=>{ const s=new Date(); s.setHours(l.startHour,l.startMin||0,0,0); return {l,s}; }).sort((a,b)=> a.s-b.s); const current = (DATA.lectures||[]).find(l=> isNowInLecture(l)); if(current){ live.innerText='🕒 الآن في محاضرة: ' + current.title; return; } if(todays.length>0){ const next = todays.find(t=> t.s>now); if(next) live.innerText='⏳ المحاضرة القادمة اليوم: ' + next.l.title + ' بعد ' + timeRemaining(next.s); else live.innerText='لا توجد محاضرات لاحقة اليوم'; return; } live.innerText='لا توجد محاضرات الآن'; }
+function isNowInLecture(lec){ 
+  if(!lec) return false; 
+  const now=new Date(); 
+  const todayIndex = now.getDay(); 
+  const today = DAYS[(todayIndex + 6) % 7]; // مطابقة مع DAYS
+  if(lec.day !== today) return false; 
+  const start=new Date(now); 
+  start.setHours(lec.startHour, lec.startMin||0,0,0); 
+  const end=new Date(now); 
+  end.setHours(lec.endHour, lec.endMin||0,0,0); 
+  return now>=start && now<end; 
+}
 
-function timeRemaining(targetDate){ const diff = Math.max(0, targetDate - new Date()); const hrs = Math.floor(diff/3600000); const mins = Math.floor((diff%3600000)/60000); return (hrs>0? hrs+' ساعة ':'') + mins + ' دقيقة'; }
+function renderLiveNotice(){ 
+  const live=document.getElementById('liveNotice'); 
+  if(!live) return;
+  const now=new Date(); 
+  const todayIndex = now.getDay(); 
+  const today = DAYS[(todayIndex + 6) % 7]; 
+  const todays = (DATA.lectures||[]).filter(l=> l.day===today).map(l=>{ 
+    const s=new Date(now); 
+    s.setHours(l.startHour,l.startMin||0,0,0); 
+    return {l,s}; 
+  }).sort((a,b)=> a.s-b.s); 
+  const current = (DATA.lectures||[]).find(l=> isNowInLecture(l)); 
+  if(current){ 
+    live.innerText='🕒 الآن في محاضرة: ' + current.title; 
+    return; 
+  } 
+  if(todays.length>0){ 
+    const next = todays.find(t=> t.s>now); 
+    if(next) { 
+      live.innerText='⏳ المحاضرة القادمة اليوم: ' + next.l.title + ' بعد ' + timeRemaining(next.s); 
+    } else { 
+      live.innerText='لا توجد محاضرات لاحقة اليوم'; 
+    }
+    return; 
+  } 
+  live.innerText='لا توجد محاضرات الآن'; 
+}
 
-/* Export/Import/Print handlers */
-document.getElementById('exportBtn').addEventListener('click', ()=>{ const a=document.createElement('a'); const blob=new Blob([JSON.stringify(DATA)],{type:'application/json'}); a.href=URL.createObjectURL(blob); a.download='jadwal-v3-backup.json'; a.click(); });
-document.getElementById('importBtn').addEventListener('click', ()=>{ const inp=document.createElement('input'); inp.type='file'; inp.accept='application/json'; inp.onchange=()=>{ const f=inp.files[0]; const reader=new FileReader(); reader.onload=()=>{ try{ DATA = JSON.parse(reader.result); saveData(DATA); renderAll(); alert('تم الاستيراد'); }catch(e){ alert('ملف غير صحيح'); } }; reader.readAsText(f); }; inp.click(); });
-document.getElementById('printBtn').addEventListener('click', ()=>{ const w=window.open('','_blank'); w.document.open(); w.document.write('<!doctype html><html lang=\"ar\" dir=\"rtl\"><head><meta charset=\"utf-8\"/><title>جدول المحاضرات</title><style>body{font-family:Arial,sans-serif;padding:16px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:6px;text-align:center}th{background:#f0f0f0}</style></head><body><h2>جدول المحاضرات</h2>'+document.getElementById('tableContainer').innerHTML+'<p>تصميم وبرمجة: Khaled El-Reweni</p></body></html>'); w.document.close(); setTimeout(()=>{ w.print(); },600); });
+function timeRemaining(targetDate){ 
+  const diff = Math.max(0, targetDate - new Date()); 
+  const hrs = Math.floor(diff/3600000); 
+  const mins = Math.floor((diff%3600000)/60000); 
+  return (hrs>0? hrs+' ساعة ':'') + mins + ' دقيقة'; 
+}
 
-/* Tab switching */
-document.querySelectorAll('.tab-btn').forEach(b=> b.addEventListener('click', ()=>{ document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active'); const tab=b.getAttribute('data-tab'); document.getElementById('tab-weekly').style.display = tab==='weekly' ? 'block' : 'none'; document.getElementById('tab-day').style.display = tab==='day' ? 'block' : 'none'; document.getElementById('tab-instructors').style.display = tab==='instructors' ? 'block' : 'none'; }));
+/* Admin UI */
+function openAdminFlow(){ 
+  const root=document.getElementById('modalRoot'); 
+  if(!root) return;
+  root.innerHTML=''; 
+  const wrap=document.createElement('div'); 
+  wrap.className='modal-back'; 
+  const m=document.createElement('div'); 
+  m.className='modal'; 
+  m.innerHTML='<h3>دخول لوحة الإدارة</h3><p class="kv">أدخل كلمة المرور</p><input id="pw" class="input" type="password" /><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelPw" class="btn">إلغاء</button><button id="submitPw" class="btn">دخول</button></div>'; 
+  wrap.appendChild(m); 
+  root.appendChild(wrap); 
+  root.style.display='block'; 
+  document.getElementById('cancelPw').onclick=()=>{ 
+    root.style.display='none'; 
+    root.innerHTML=''; 
+  }; 
+  document.getElementById('submitPw').onclick=()=>{ 
+    const v=document.getElementById('pw').value; 
+    if(v===ADMIN_PASSWORD){ 
+      window.isAdmin = true; 
+      root.style.display='none'; 
+      root.innerHTML=''; 
+      openAdmin(); 
+      updateAdminVisibility(); 
+      recordChange('الأدمن دخل لوحة التحكم'); 
+    } else { 
+      const pwEl=document.getElementById('pw'); 
+      pwEl.style.animation='shake 0.3s'; 
+      setTimeout(()=> pwEl.style.animation='',350); 
+      alert('كلمة المرور خاطئة'); 
+    } 
+  }; 
+}
 
+function openAdmin(){ 
+  const root=document.getElementById('modalRoot'); 
+  if(!root) return;
+  root.innerHTML=''; 
+  const wrap=document.createElement('div'); 
+  wrap.className='modal-back'; 
+  const m=document.createElement('div'); 
+  m.className='modal'; 
+  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ</button> <button id="closeBtn" class="btn">خروج</button></div></div><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
+  wrap.appendChild(m); 
+  root.appendChild(wrap); 
+  root.style.display='block'; 
+  document.getElementById('closeBtn').onclick=()=>{ 
+    window.isAdmin = false; 
+    root.style.display='none'; 
+    root.innerHTML=''; 
+    updateAdminVisibility(); 
+  }; 
+  document.getElementById('saveBtn').onclick=()=>{ 
+    saveData(DATA); 
+    alert('تم الحفظ'); 
+    renderAll(); 
+  }; 
+  document.getElementById('tabLect').onclick=()=>{ 
+    document.querySelectorAll('#adminBody button').forEach(b=>b.classList.remove('active')); 
+    this.classList.add('active'); 
+    renderAdminLectures(); 
+  }; 
+  document.getElementById('tabInst').onclick=()=>{ 
+    document.querySelectorAll('#adminBody button').forEach(b=>b.classList.remove('active')); 
+    this.classList.add('active'); 
+    renderAdminInstructors(); 
+  }; 
+  document.getElementById('tabImp').onclick=()=>{ 
+    document.querySelectorAll('#adminBody button').forEach(b=>b.classList.remove('active')); 
+    this.classList.add('active'); 
+    renderAdminImportExport(); 
+  }; 
+  renderAdminLectures(); 
+}
 
-// --- Added helpers: autosave, change log, admin visibility, edit modal ---
-if(!window.isAdmin) window.isAdmin = false;
-if(!Array.isArray(DATA.changes)) DATA.changes = [];
+function renderAdminLectures(){ 
+  const body=document.getElementById('adminBody'); 
+  if(!body) return;
+  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة محاضرة جديدة</h4></div>'; 
+  const form=document.createElement('form'); 
+  const hourOptions=HOURS.map(h=>'<option value="'+h+'">'+to12(h)+'</option>').join(''); 
+  const minuteOptions='<option value="0">00</option><option value="30">30</option>'; 
+  const instOptions='<option value="">اختر دكتور (اختياري)</option>'+DATA.instructors.map(i=>'<option value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join(''); 
+  form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; 
+  body.appendChild(form); 
+  form.onsubmit=(e)=>{ 
+    e.preventDefault(); 
+    const day=document.getElementById('fDay').value; 
+    const sh=+document.getElementById('fStartH').value; 
+    const sm=+document.getElementById('fStartM').value; 
+    const eh=+document.getElementById('fEndH').value; 
+    const em=+document.getElementById('fEndM').value; 
+    let startNum=sh + (sm/60); 
+    let endNum=eh + (em/60); 
+    if(endNum<=startNum) { 
+      alert('وقت النهاية يجب أن يكون بعد وقت البداية'); 
+      return; 
+    } 
+    const startHour=Math.floor(startNum); 
+    const endHour=Math.floor(endNum); 
+    const lec={ 
+      id: uid(), 
+      day, 
+      startHour, 
+      startMin: sm, 
+      endHour, 
+      endMin: em, 
+      title: document.getElementById('fTitle').value.trim(), 
+      instructorId: document.getElementById('fInst').value || null, 
+      instructorName: null, 
+      location: document.getElementById('fLocation').value.trim(), 
+      notes: document.getElementById('fNotes').value.trim(), 
+      link: '' 
+    }; 
+    DATA.lectures.push(lec); 
+    saveData(DATA); 
+    recordChange('أُضيفت محاضرة جديدة: ' + lec.title); 
+    renderAdminLectures(); 
+    renderAll(); 
+  }; 
+  const list=document.createElement('div'); 
+  list.style.marginTop='12px'; 
+  if(DATA.lectures.length===0) { 
+    list.innerHTML='<div class="card">لا توجد محاضرات بعد</div>'; 
+  } else { 
+    const ul=document.createElement('div'); 
+    ul.style.display='grid'; 
+    ul.style.gap='8px'; 
+    DATA.lectures.forEach(l=>{ 
+      const el=document.createElement('div'); 
+      el.className='card'; 
+      const instName=getInstructorName(l.instructorId) || l.instructorName || ''; 
+      el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(l.title)+'</div><div class="kv">'+escapeHtml(l.day)+' '+to12WithMin(l.startHour,l.startMin)+' — '+to12WithMin(l.endHour,l.endMin)+' • '+escapeHtml(instName)+'</div></div><div><button class="btn small" data-id="'+l.id+'">حذف</button> <button class="btn small" data-edit="'+l.id+'">تعديل</button></div></div>'; 
+      ul.appendChild(el); 
+    }); 
+    list.appendChild(ul); 
+    // delete buttons
+    list.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', ()=>{ 
+      const id=b.getAttribute('data-id'); 
+      if(confirm('حذف المحاضرة؟')){ 
+        DATA.lectures = DATA.lectures.filter(x=> x.id !== id); 
+        saveData(DATA); 
+        renderAdminLectures(); 
+        renderAll(); 
+        recordChange('حُذفت محاضرة: ' + DATA.lectures.find(x=>x.id===id)?.title || 'غير معروف'); 
+      } 
+    })); 
+    // edit buttons
+    list.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{ 
+      const id=b.getAttribute('data-edit'); 
+      const lec = DATA.lectures.find(x=>x.id===id); 
+      if(lec) openEditModal(lec); 
+    })); 
+  } 
+  body.appendChild(list); 
+}
 
+function renderAdminInstructors(){ 
+  const body=document.getElementById('adminBody'); 
+  if(!body) return;
+  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة دكتور جديد</h4></div>'; 
+  const form=document.createElement('form'); 
+  form.innerHTML='<div class="row><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور</button></div>'; 
+  body.appendChild(form); 
+  form.onsubmit=(e)=>{ 
+    e.preventDefault(); 
+    const inst={ 
+      id: uid(), 
+      name: document.getElementById('iName').value.trim(), 
+      title: document.getElementById('iTitle').value.trim(), 
+      subjects: document.getElementById('iSubjects').value.split(',').map(s=>s.trim()).filter(Boolean), 
+      bio: document.getElementById('iBio').value.trim() 
+    }; 
+    if(!inst.name){ alert('اسم الدكتور مطلوب'); return; } 
+    DATA.instructors.push(inst); 
+    saveData(DATA); 
+    recordChange('أُضيف دكتور جديد: ' + inst.name); 
+    renderAdminInstructors(); 
+    renderAll(); 
+  }; 
+  const list=document.createElement('div'); 
+  list.style.marginTop='12px'; 
+  if(DATA.instructors.length===0) { 
+    list.innerHTML='<div class="card">لا يوجد دكاترة حتى الآن</div>'; 
+  } else { 
+    const ul=document.createElement('div'); 
+    ul.style.display='grid'; 
+    ul.style.gap='8px'; 
+    DATA.instructors.forEach(i=>{ 
+      const el=document.createElement('div'); 
+      el.className='card'; 
+      el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div></div><div><button class="btn small" data-id="'+i.id+'">حذف</button></div></div>'; 
+      ul.appendChild(el); 
+    }); 
+    list.appendChild(ul); 
+    list.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', ()=>{ 
+      const id=b.getAttribute('data-id'); 
+      if(confirm('حذف الدكتور؟')){ 
+        const instName = DATA.instructors.find(x=>x.id===id)?.name || ''; 
+        DATA.instructors = DATA.instructors.filter(x=> x.id!==id); 
+        saveData(DATA); 
+        renderAdminInstructors(); 
+        renderAll(); 
+        recordChange('حُذف الدكتور: ' + instName); 
+      } 
+    })); 
+  } 
+  body.appendChild(list); 
+}
+
+function renderAdminImportExport(){ 
+  const body=document.getElementById('adminBody'); 
+  if(!body) return;
+  body.innerHTML='<div style="margin-bottom:12px"><h4>استيراد/تصدير البيانات</h4></div>'; 
+  const exportBtn=document.createElement('button'); 
+  exportBtn.className='btn'; 
+  exportBtn.innerText='تحميل JSON'; 
+  exportBtn.onclick=()=>{ 
+    const a=document.createElement('a'); 
+    const blob=new Blob([JSON.stringify(DATA, null, 2)],{type:'application/json'}); 
+    a.href=URL.createObjectURL(blob); 
+    a.download='jadwal-v3-backup.json'; 
+    a.click(); 
+  }; 
+  const importBtn=document.createElement('button'); 
+  importBtn.className='btn'; 
+  importBtn.style.marginRight='8px'; 
+  importBtn.innerText='استيراد JSON'; 
+  importBtn.onclick=()=>{ 
+    const inp=document.createElement('input'); 
+    inp.type='file'; 
+    inp.accept='application/json'; 
+    inp.onchange=()=>{ 
+      const f=inp.files[0]; 
+      if(!f) return; 
+      const reader=new FileReader(); 
+      reader.onload=()=>{ 
+        try{ 
+          const newData = JSON.parse(reader.result); 
+          if(newData.lectures && newData.instructors){ 
+            DATA = newData; 
+            saveData(DATA); 
+            renderAll(); 
+            alert('تم الاستيراد بنجاح'); 
+            recordChange('تم استيراد البيانات من ملف JSON'); 
+          } else { 
+            alert('الملف غير صحيح (يجب أن يحتوي على lectures و instructors)'); 
+          } 
+        }catch(e){ 
+          alert('ملف غير صحيح: ' + e.message); 
+        } 
+      }; 
+      reader.readAsText(f); 
+    }; 
+    inp.click(); 
+  }; 
+  const clearBtn=document.createElement('button'); 
+  clearBtn.className='btn'; 
+  clearBtn.style.background='red'; 
+  clearBtn.style.color='white'; 
+  clearBtn.innerText='مسح كل البيانات'; 
+  clearBtn.onclick=()=>{ 
+    if(confirm('هل أنت متأكد؟ سيتم مسح كل المحاضرات والدكاترة!')){ 
+      DATA = {lectures:[], instructors:[], changes:[]}; 
+      saveData(DATA); 
+      renderAll(); 
+      recordChange('تم مسح كل البيانات'); 
+      alert('تم المسح'); 
+    } 
+  }; 
+  body.appendChild(importBtn); 
+  body.appendChild(exportBtn); 
+  body.appendChild(clearBtn); 
+}
+
+/* Edit Modal */
+function openEditModal(lec){
+  const root=document.getElementById('modalRoot'); 
+  if(!root) return; 
+  root.innerHTML='';
+  const wrap=document.createElement('div'); 
+  wrap.className='modal-back'; 
+  const m=document.createElement('div'); 
+  m.className='modal';
+  const hourOptions=HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join(''); 
+  m.innerHTML = '<h3>تعديل المحاضرة</h3>';
+  m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+hourOptions+'</select><select id="eStartM" class="input"><option '+((lec.startMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.startMin||0)===30?'selected':'')+' value="30">30</option></select></div></div></div>';
+  m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select><select id="eEndM" class="input"><option '+((lec.endMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.endMin||0)===30?'selected':'')+' value="30">30</option></select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>';
+  m.innerHTML += '<div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="eInst" class="input"><option value="">اختر دكتور (اختياري)</option>'+ (DATA.instructors.map(i=>'<option '+(i.id===lec.instructorId?'selected':'')+' value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join('')) + '</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="eLocation" class="input" value="'+escapeHtml(lec.location||'')+'" /></div></div>';
+  m.innerHTML += '<textarea id="eNotes" class="input">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل</button></div>';
+  wrap.appendChild(m); 
+  root.appendChild(wrap); 
+  root.style.display='block';
+  document.getElementById('cancelEdit').onclick=()=>{ 
+    root.style.display='none'; 
+    root.innerHTML=''; 
+  };
+  document.getElementById('saveEdit').onclick=()=>{
+    const day=document.getElementById('eDay').value;
+    const sh=+document.getElementById('eStartH').value; 
+    const sm=+document.getElementById('eStartM').value;
+    const eh=+document.getElementById('eEndH').value; 
+    const em=+document.getElementById('eEndM').value;
+    const title=document.getElementById('eTitle').value.trim();
+    const inst=document.getElementById('eInst').value || null;
+    const loc=document.getElementById('eLocation').value.trim();
+    const notes=document.getElementById('eNotes').value.trim();
+    let startNum=sh + (sm/60); 
+    let endNum=eh + (em/60); 
+    if(endNum<=startNum) { 
+      alert('وقت النهاية يجب أن يكون بعد وقت البداية'); 
+      return; 
+    } 
+    const startHour=Math.floor(startNum); 
+    const endHour=Math.floor(endNum); 
+    const idx = DATA.lectures.findIndex(x=> x.id===lec.id);
+    if(idx>-1){
+      DATA.lectures[idx].day = day;
+      DATA.lectures[idx].startHour = startHour; 
+      DATA.lectures[idx].startMin = sm;
+      DATA.lectures[idx].endHour = endHour; 
+      DATA.lectures[idx].endMin = em;
+      DATA.lectures[idx].title = title;
+      DATA.lectures[idx].instructorId = inst;
+      DATA.lectures[idx].location = loc;
+      DATA.lectures[idx].notes = notes;
+      saveData(DATA);
+      recordChange('تم تعديل المحاضرة: ' + title);
+      renderAll();
+    }
+    root.style.display='none'; 
+    root.innerHTML='';
+  };
+}
+
+/* Change log */
 function recordChange(msg){
   try{
     const now = new Date();
@@ -334,70 +806,136 @@ function recordChange(msg){
     if(DATA.changes.length>300) DATA.changes.length = 300;
     saveData(DATA);
     renderChangeLog();
-  }catch(e){ console.error('recordChange', e); }
+  }catch(e){ console.error('recordChange error:', e); }
 }
-
-setInterval(()=>{ try{ saveData(DATA); }catch(e){ console.error(e);} }, 30000); // autosave every 30s
 
 function renderChangeLog(){
   try{
-    const footer = document.querySelector('.footer'); if(!footer) return;
+    const footer = document.querySelector('.footer'); 
+    if(!footer) return;
     let wrap = document.getElementById('changeLogWrap');
-    if(!wrap){ wrap = document.createElement('div'); wrap.id='changeLogWrap'; wrap.className='card'; wrap.style.marginTop='12px'; footer.parentNode.insertBefore(wrap, footer); }
+    if(!wrap){
+      wrap = document.createElement('div'); 
+      wrap.id='changeLogWrap'; 
+      wrap.className='card'; 
+      wrap.style.marginTop='12px'; 
+      footer.parentNode.insertBefore(wrap, footer); 
+    }
     const groups = {};
-    (DATA.changes||[]).forEach(ch=>{ const d = (ch.ts||'').slice(0,10) || 'unknown'; groups[d] = groups[d] || []; groups[d].push(ch); });
+    (DATA.changes||[]).forEach(ch=>{ 
+      const d = (ch.ts||'').slice(0,10) || 'unknown'; 
+      groups[d] = groups[d] || []; 
+      groups[d].push(ch); 
+    });
     let html = '<h4>سجل التعديلات اليومية</h4>';
-    if(Object.keys(groups).length===0) html += '<div class="kv">لم يتم إجراء تعديلات بعد</div>';
-    else{
+    if(Object.keys(groups).length===0) { 
+      html += '<div class="kv">لم يتم إجراء تعديلات بعد</div>'; 
+    } else {
       Object.keys(groups).sort((a,b)=> b.localeCompare(a)).forEach(date=>{
         html += '<div style="margin-top:8px"><div style="font-weight:800">'+date+'</div><ul style="margin:6px 0 0 16px">';
-        groups[date].forEach(g=>{ const time = (g.ts||'').slice(11,19); html += '<li class="kv">'+time+' — '+escapeHtml(g.msg)+'</li>'; });
+        groups[date].forEach(g=>{ 
+          const time = (g.ts||'').slice(11,19); 
+          html += '<li class="kv">'+time+' — '+escapeHtml(g.msg)+'</li>'; 
+        });
         html += '</ul></div>';
       });
     }
     wrap.innerHTML = html;
-  }catch(e){ console.error('renderChangeLog', e); }
+  }catch(e){ console.error('renderChangeLog error:', e); }
 }
 
 function updateAdminVisibility(){
+  // إخفاء/إظهار أزرار الإدارة في الجدول واليوم
   document.querySelectorAll('.admin-only').forEach(el=> el.style.display = window.isAdmin ? 'inline-block' : 'none');
-  const adminBtn = document.getElementById('adminBtn'); if(adminBtn) adminBtn.style.display='inline-block';
 }
 
-function openEditModal(lec){
-  const root=document.getElementById('modalRoot'); if(!root) return; root.innerHTML='';
-  const wrap=document.createElement('div'); wrap.className='modal-back'; const m=document.createElement('div'); m.className='modal';
-  m.innerHTML = '<h3>تعديل المحاضرة</h3>';
-  m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+h+'</option>').join('')+'</select><select id="eStartM" class="input"><option '+((lec.startMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.startMin||0)===30?'selected':'')+' value="30">30</option></select></div></div></div>';
-  m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+h+'</option>').join('')+'</select><select id="eEndM" class="input"><option '+((lec.endMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.endMin||0)===30?'selected':'')+' value="30">30</option></select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+(lec.title||'')+'" /></div></div>';
-  m.innerHTML += '<div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="eInst" class="input"><option value="">اختر دكتور (اختياري)</option>'+ (DATA.instructors.map(i=>'<option '+(i.id===lec.instructorId?'selected':'')+' value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join('')) + '</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="eLocation" class="input" value="'+(lec.location||'')+'" /></div></div>';
-  m.innerHTML += '<textarea id="eNotes" class="input">'+(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل</button></div>';
-  wrap.appendChild(m); root.appendChild(wrap); root.style.display='block';
-  document.getElementById('cancelEdit').onclick=()=>{ root.style.display='none'; root.innerHTML=''; };
-  document.getElementById('saveEdit').onclick=()=>{
-    const day=document.getElementById('eDay').value;
-    const sh=+document.getElementById('eStartH').value; const sm=+document.getElementById('eStartM').value;
-    const eh=+document.getElementById('eEndH').value; const em=+document.getElementById('eEndM').value;
-    const title=document.getElementById('eTitle').value.trim();
-    const inst=document.getElementById('eInst').value || null;
-    const loc=document.getElementById('eLocation').value.trim();
-    const notes=document.getElementById('eNotes').value.trim();
-    const idx = DATA.lectures.findIndex(x=> x.id===lec.id);
-    if(idx>-1){
-      DATA.lectures[idx].day = day;
-      DATA.lectures[idx].startHour = sh; DATA.lectures[idx].startMin = sm;
-      DATA.lectures[idx].endHour = eh; DATA.lectures[idx].endMin = em;
-      DATA.lectures[idx].title = title;
-      DATA.lectures[idx].instructorId = inst;
-      DATA.lectures[idx].location = loc;
-      DATA.lectures[idx].notes = notes;
-      saveData(DATA);
-      recordChange('تم تعديل المحاضرة: '+title+' بواسطة الأدمن');
-      renderAll();
-    }
-    root.style.display='none'; root.innerHTML='';
-  };
+/* Export/Import/Print handlers */
+function initHandlers(){
+  // Export
+  const exportBtn = document.getElementById('exportBtn');
+  if(exportBtn) exportBtn.addEventListener('click', ()=>{ 
+    const a=document.createElement('a'); 
+    const blob=new Blob([JSON.stringify(DATA, null, 2)],{type:'application/json'}); 
+    a.href=URL.createObjectURL(blob); 
+    a.download='jadwal-v3-backup.json'; 
+    a.click(); 
+  });
+
+  // Import
+  const importBtn = document.getElementById('importBtn');
+  if(importBtn) importBtn.addEventListener('click', ()=>{ 
+    const inp=document.createElement('input'); 
+    inp.type='file'; 
+    inp.accept='application/json'; 
+    inp.onchange=()=>{ 
+      const f=inp.files[0]; 
+      if(!f) return; 
+      const reader=new FileReader(); 
+      reader.onload=()=>{ 
+        try{ 
+          const newData = JSON.parse(reader.result); 
+          if(newData.lectures && newData.instructors){ 
+            DATA = newData; 
+            saveData(DATA); 
+            renderAll(); 
+            alert('تم الاستيراد بنجاح'); 
+          } else { 
+            alert('الملف غير صحيح'); 
+          } 
+        }catch(e){ 
+          alert('ملف غير صحيح: ' + e.message); 
+        } 
+      }; 
+      reader.readAsText(f); 
+    }; 
+    inp.click(); 
+  });
+
+  // Print
+  const printBtn = document.getElementById('printBtn');
+  if(printBtn) printBtn.addEventListener('click', ()=>{ 
+    const w=window.open('','_blank'); 
+    const printStyles = `
+      body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; padding: 16px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
+      th { background: #f0f0f0; }
+      .slot { padding: 4px; border-radius: 4px; margin: 2px; }
+      .current { outline: 2px solid #7c3aed; }
+    `;
+    w.document.open(); 
+    w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><title>جدول المحاضرات</title><style>'+printStyles+'</style><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"></head><body><h2>جدول المحاضرات</h2>'+document.getElementById('tableContainer').innerHTML+'<p style="margin-top:20px">تصميم وبرمجة: Khaled El-Reweni 💻</p></body></html>'); 
+    w.document.close(); 
+    setTimeout(()=>{ w.print(); }, 500); 
+  });
+
+  // Admin
+  const adminBtn = document.getElementById('adminBtn');
+  if(adminBtn) adminBtn.addEventListener('click', openAdminFlow);
+
+  // Theme toggle (simple, without full dark mode implementation)
+  const themeToggle = document.getElementById('themeToggle');
+  if(themeToggle) themeToggle.addEventListener('click', ()=>{ 
+    document.documentElement.toggleAttribute('data-theme', 'dark'); 
+    localStorage.setItem('theme', document.documentElement.hasAttribute('data-theme') ? 'dark' : 'light'); 
+  });
+
+  // Load theme
+  if(localStorage.getItem('theme') === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 }
+
+/* Tab switching */
+function initTabs(){
+  document.querySelectorAll('.tab-btn').forEach(b=> b.addEventListener('click', ()=>{ 
+    document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); 
+    b.classList.add('active'); 
+    const tab=b.getAttribute('data-tab'); 
+    document.getElementById('tab-weekly').style.display = tab==='weekly' ? 'block' : 'none'; 
+    document.getElementById('tab-day').style.display = tab==='day' ? 'block' : 'none'; 
+    document.getElementById('tab-instructors').style.display = tab==='instructors' ? 'block' : 'none'; 
+  }));
+}
+
 function renderAll(){
   renderTable();
   renderDaysTabs();
@@ -407,11 +945,27 @@ function renderAll(){
   updateAdminVisibility();
 }
 
-renderAll();
-setInterval(()=>{ renderAll(); },60000); // refresh each minute
+// Initialization
+document.addEventListener('DOMContentLoaded', ()=>{ 
+  initHandlers(); 
+  initTabs(); 
+  renderAll(); 
+  // Autosave every 30s
+  setInterval(()=>{ saveData(DATA); }, 30000);   // Refresh live notice every minute
+  setInterval(renderLiveNotice, 60000);
+});
 
-/* expose API */
-window.jadwal_v3 = { data:()=>JSON.stringify(DATA), clear:()=>{ if(confirm('مسح كل البيانات؟')){ DATA={lectures:[], instructors:[]}; saveData(DATA); renderAll(); } } };
+// expose API (for external use if needed)
+window.jadwal_v3 = { 
+  data:()=>JSON.stringify(DATA), 
+  clear:()=>{ 
+    if(confirm('مسح كل البيانات؟')){ 
+      DATA={lectures:[], instructors:[], changes:[]}; 
+      saveData(DATA); 
+      renderAll(); 
+    } 
+  } 
+};
 </script>
 </body>
 </html>
