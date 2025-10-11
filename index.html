@@ -145,11 +145,12 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 /* Config */
 const ENCODED_PASSWORD = 'S2hhbGVkMjExMCU='; // 'Khaled2110%'
 const ADMIN_PASSWORD = atob(ENCODED_PASSWORD); // decode عند التشغيل
-const STORAGE_KEY_THEME = 'jadwal_theme'; // حفظ الثيم فقط (محلي لكل مستخدم)
+const STORAGE_KEY_THEME = 'jadwal_theme';
+const STORAGE_KEY_DATA = 'jadwal_data'; // مفتاح لحفظ البيانات محليًا
 const DAYS = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
 const HOURS = Array.from({length:15},(_,i)=>8+i); // 8 ص إلى 10 م (15 ساعة)
 
-/* بيانات افتراضية ثابتة (hardcode) – عدلها هنا وارفع على GitHub عشان تظهر للكل تلقائيًا */
+/* بيانات افتراضية ثابتة (hardcode) – عدلها هنا وارفع على GitHub عشان تظهر للكل */
 let DATA = {
   lectures: [  // أضف محاضراتك الحقيقية هنا (انسخ من JSON اللي صدرته قبل كده)
     { id: 'lec1', day: 'الأحد', startHour: 8, startMin: 0, endHour: 9, endMin: 30, title: 'رياضيات 101', instructorId: 'inst1', instructorName: null, location: 'قاعة 101', notes: 'محاضرة أساسية', link: '' },
@@ -164,7 +165,7 @@ let DATA = {
     { id: 'inst3', name: 'د. محمد', title: 'أستاذ فيزياء', subjects: ['فيزياء'], bio: 'متخصص في الكهرباء والميكانيكا' },
     // أضف المزيد من الدكاترة هنا...
   ],
-  changes: []  // سجل التعديلات (مش محفوظ، بس للعرض المؤقت في الإدارة)
+  changes: []  // سجل التعديلات
 };
 
 window.isAdmin = false;
@@ -181,10 +182,27 @@ function displayHour(h) {
   return hh + ' ' + period;
 }
 
-/* Data helpers (بدون localStorage للبيانات الرئيسية) */
+/* Data helpers (حفظ/تحميل من localStorage للثبات المحلي) */
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,9); }
 function saveTheme(theme){ localStorage.setItem(STORAGE_KEY_THEME, theme); }
 function loadTheme(){ return localStorage.getItem(STORAGE_KEY_THEME) || 'light'; }
+function saveDataToLocal() {
+  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(DATA));
+}
+function loadDataFromLocal() {
+  const saved = localStorage.getItem(STORAGE_KEY_DATA);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.lectures && parsed.instructors) {
+        DATA = parsed;
+        console.log('تم تحميل البيانات من localStorage');
+      }
+    } catch (e) {
+      console.error('خطأ في تحميل البيانات:', e);
+    }
+  }
+}
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 /* Color per subject */
@@ -194,8 +212,7 @@ function genColor(title){
   if(colorCache[title]) return colorCache[title]; 
   let h=0; 
   for(let i=0;i<title.length;i++){ h=(h<<5)-h+title.charCodeAt(i); h|=0; } 
-  const r=Math.abs(h)%200+20; 
-  const g=(Math.abs(h*13)%150)+80; 
+  const r=Math.abs(h)%200+20;   const g=(Math.abs(h*13)%150)+80; 
   const b=(Math.abs(h*7)%180)+40; 
   const bg='rgba('+r+','+g+','+b+',0.18)'; 
   const solid='rgba('+r+','+g+','+b+',0.95)'; 
@@ -284,7 +301,7 @@ function renderTable(){
             a.style.marginTop='6px'; 
             div.appendChild(a); 
           }
-          // admin actions (مؤقتة في الذاكرة)
+          // admin actions
           if(window.isAdmin){
             const actions=document.createElement('div'); 
             actions.style.marginTop='6px'; 
@@ -298,10 +315,11 @@ function renderTable(){
             delBtn.onclick = (ev)=>{ 
               ev.stopPropagation(); 
               if(confirm('حذف المحاضرة؟')){ 
+                const lecTitle = lec.title;
                 DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
+                saveDataToLocal(); // حفظ محلي
                 renderAll(); 
-                recordChange('حُذفت المحاضرة: ' + lec.title); 
-                alert('التعديل مؤقت – سيختفي عند الـ refresh. للـ sharing، عدل الكود وارفع على GitHub.'); 
+                recordChange('حُذفت المحاضرة: ' + lecTitle); 
               } 
             };
             const editBtn=document.createElement('button'); 
@@ -386,7 +404,7 @@ function showDay(day){
       a.style.marginTop='6px'; 
       card.appendChild(a); 
     }
-    // admin actions (مؤقتة)
+    // admin actions
     if(window.isAdmin){
       const actions = document.createElement('div'); 
       actions.style.marginTop='8px'; 
@@ -398,10 +416,11 @@ function showDay(day){
       delBtn.innerText='🗑️'; 
       delBtn.onclick=()=>{ 
         if(confirm('حذف المحاضرة؟')){ 
+          const lecTitle = lec.title;
           DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
+          saveDataToLocal(); // حفظ محلي
           renderAll(); 
-          recordChange('حُذفت المحاضرة: '+lec.title); 
-          alert('التعديل مؤقت – سيختفي عند الـ refresh. للـ sharing، عدل الكود وارفع على GitHub.'); 
+          recordChange('حُذفت المحاضرة: '+lecTitle); 
         } 
       };
       const editBtn = document.createElement('button'); 
@@ -583,16 +602,15 @@ function openAdminFlow(){
   }; 
 }
 
-// باقي الدوال (openAdmin, renderAdminLectures, etc.) – نفس الكود السابق مع تعديلات بسيطة للـ alert المؤقت
+// Admin panel
 function openAdmin(){ 
   const root=document.getElementById('modalRoot'); 
   if(!root) return;
   root.innerHTML=''; 
-  const wrap=document.createElement('div'); 
-  wrap.className='modal-back'; 
+  const wrap=document.createElement('div');   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal'; 
-  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة (مؤقتة)</h3><div><button id="saveBtn" class="btn">حفظ مؤقت</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات مؤقتة في الذاكرة – ستختفي عند الـ refresh. للـ sharing، عدل DATA في الكود وارفع على GitHub.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
+  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات محفوظة محليًا في متصفحك. لجعلها تظهر للجميع، استخدم "تصدير كود GitHub" في تبويب الاستيراد/تصدير، ثم انسخ الكود ولصقه في ملف HTML على GitHub وارفع.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block'; 
@@ -603,7 +621,8 @@ function openAdmin(){
     updateAdminVisibility(); 
   }; 
   document.getElementById('saveBtn').onclick=()=>{ 
-    alert('التعديلات محفوظة مؤقتًا في الذاكرة. للـ sharing الدائم، عدل DATA في الكود وارفع على GitHub.'); 
+    saveDataToLocal(); // حفظ محلي
+    alert('تم حفظ التعديلات محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
     renderAll(); 
   }; 
   document.getElementById('tabLect').onclick=()=>{ 
@@ -621,18 +640,19 @@ function openAdmin(){
     this.classList.add('active'); 
     renderAdminImportExport(); 
   }; 
+  loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
   renderAdminLectures(); 
 }
 
 function renderAdminLectures(){ 
   const body=document.getElementById('adminBody'); 
   if(!body) return;
-  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة محاضرة جديدة (مؤقتة)</h4></div>'; 
+  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة محاضرة جديدة</h4></div>'; 
   const form=document.createElement('form'); 
   const hourOptions=HOURS.map(h=>'<option value="'+h+'">'+to12(h)+'</option>').join(''); 
   const minuteOptions='<option value="0">00</option><option value="30">30</option>'; 
   const instOptions='<option value="">اختر دكتور (اختياري)</option>'+DATA.instructors.map(i=>'<option value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join(''); 
-  form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة (مؤقت)</button></div>'; 
+  form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; 
   body.appendChild(form); 
   form.onsubmit=(e)=>{ 
     e.preventDefault(); 
@@ -664,10 +684,11 @@ function renderAdminLectures(){
       link: '' 
     }; 
     DATA.lectures.push(lec); 
+    saveDataToLocal(); // حفظ محلي
     recordChange('أُضيفت محاضرة جديدة: ' + lec.title); 
     renderAdminLectures(); 
     renderAll(); 
-    alert('تم الإضافة مؤقتًا في الذاكرة. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+    alert('تم الإضافة وحفظها محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
   }; 
   const list=document.createElement('div'); 
   list.style.marginTop='12px'; 
@@ -691,10 +712,11 @@ function renderAdminLectures(){
       if(confirm('حذف المحاضرة؟')){ 
         const lecTitle = DATA.lectures.find(x=>x.id===id)?.title || 'غير معروف'; 
         DATA.lectures = DATA.lectures.filter(x=> x.id !== id); 
+        saveDataToLocal(); // حفظ محلي
         renderAdminLectures(); 
         renderAll(); 
         recordChange('حُذفت محاضرة: ' + lecTitle); 
-        alert('تم الحذف مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+        alert('تم الحذف وحفظه محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
       } 
     })); 
     // edit buttons
@@ -710,9 +732,9 @@ function renderAdminLectures(){
 function renderAdminInstructors(){ 
   const body=document.getElementById('adminBody'); 
   if(!body) return;
-  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة دكتور جديد (مؤقت)</h4></div>'; 
+  body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة دكتور جديد</h4></div>'; 
   const form=document.createElement('form'); 
-  form.innerHTML='<div class="row"><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور (مؤقت)</button></div>'; 
+  form.innerHTML='<div class="row"><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور</button></div>'; 
   body.appendChild(form); 
   form.onsubmit=(e)=>{ 
     e.preventDefault(); 
@@ -725,10 +747,11 @@ function renderAdminInstructors(){
     }; 
     if(!inst.name){ alert('اسم الدكتور مطلوب'); return; } 
     DATA.instructors.push(inst); 
+    saveDataToLocal(); // حفظ محلي
     recordChange('أُضيف دكتور جديد: ' + inst.name); 
     renderAdminInstructors(); 
     renderAll(); 
-    alert('تم الإضافة مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+    alert('تم الإضافة وحفظها محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
   }; 
   const list=document.createElement('div'); 
   list.style.marginTop='12px'; 
@@ -750,10 +773,11 @@ function renderAdminInstructors(){
       if(confirm('حذف الدكتور؟')){ 
         const instName = DATA.instructors.find(x=>x.id===id)?.name || ''; 
         DATA.instructors = DATA.instructors.filter(x=> x.id!==id); 
+        saveDataToLocal(); // حفظ محلي
         renderAdminInstructors(); 
         renderAll(); 
         recordChange('حُذف الدكتور: ' + instName); 
-        alert('تم الحذف مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+        alert('تم الحذف وحفظه محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
       } 
     })); 
   } 
@@ -763,22 +787,45 @@ function renderAdminInstructors(){
 function renderAdminImportExport(){ 
   const body=document.getElementById('adminBody'); 
   if(!body) return;
-  body.innerHTML='<div style="margin-bottom:12px"><h4>نسخ احتياطي محلي (JSON)</h4><p class="kv">للـ sharing الدائم، عدل DATA في الكود وارفع على GitHub.</p></div>'; 
-  const exportBtn=document.createElement('button'); 
-  exportBtn.className='btn'; 
-  exportBtn.innerText='تحميل JSON (نسخة حالية)'; 
-  exportBtn.onclick=()=>{ 
+  body.innerHTML='<div style="margin-bottom:12px"><h4>نسخ احتياطي ونشر</h4><p class="kv">لجعل التعديلات تظهر للجميع، استخدم "إنشاء كود GitHub" لنسخ الكود الجاهز، ثم لصقه في ملف HTML على GitHub وارفع.</p></div>'; 
+  const exportJsonBtn=document.createElement('button'); 
+  exportJsonBtn.className='btn'; 
+  exportJsonBtn.innerText='تحميل JSON'; 
+  exportJsonBtn.onclick=()=>{ 
     const a=document.createElement('a'); 
     const blob=new Blob([JSON.stringify(DATA, null, 2)],{type:'application/json'}); 
     a.href=URL.createObjectURL(blob); 
-    a.download='jadwal-v3-backup.json'; 
+    a.download='jadwal-backup.json'; 
     a.click(); 
-    alert('استخدم هذا الملف لتعديل DATA في الكود، ثم ارفع على GitHub.'); 
+    alert('تم تحميل JSON. استخدمه للاستيراد أو تعديل الكود.'); 
+  }; 
+  const generateCodeBtn=document.createElement('button'); 
+  generateCodeBtn.className='btn'; 
+  generateCodeBtn.style.marginRight='8px'; 
+  generateCodeBtn.innerText='إنشاء كود GitHub'; 
+  generateCodeBtn.onclick=()=>{ 
+    const code = `let DATA = {
+  lectures: ${JSON.stringify(DATA.lectures, null, 2)},
+  instructors: ${JSON.stringify(DATA.instructors, null, 2)},
+  changes: []
+};`;
+    navigator.clipboard.writeText(code).then(() => {
+      alert('تم نسخ كود DATA الجاهز! لصقه في ملف HTML تحت /* بيانات افتراضية ثابتة */، ثم ارفع على GitHub ليظهر للجميع.');
+    }).catch(() => {
+      // fallback إذا مش بيشتغل clipboard
+      const ta = document.createElement('textarea');
+      ta.value = code;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      alert('تم نسخ كود DATA! لصقه في ملف HTML، ثم ارفع على GitHub.');
+    });
   }; 
   const importBtn=document.createElement('button'); 
   importBtn.className='btn'; 
   importBtn.style.marginRight='8px'; 
-  importBtn.innerText='استيراد JSON (مؤقت)'; 
+  importBtn.innerText='استيراد JSON'; 
   importBtn.onclick=()=>{ 
     const inp=document.createElement('input'); 
     inp.type='file'; 
@@ -792,8 +839,9 @@ function renderAdminImportExport(){
           const newData = JSON.parse(reader.result); 
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
+            saveDataToLocal(); // حفظ محلي
             renderAll(); 
-            alert('تم الاستيراد مؤقتًا في الذاكرة. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+            alert('تم الاستيراد وحفظه محليًا. للنشر للجميع، استخدم إنشاء كود GitHub.'); 
           } else { 
             alert('الملف غير صحيح'); 
           } 
@@ -809,21 +857,23 @@ function renderAdminImportExport(){
   clearBtn.className='btn'; 
   clearBtn.style.background='red'; 
   clearBtn.style.color='white'; 
-  clearBtn.innerText='مسح كل البيانات (مؤقت)'; 
+  clearBtn.innerText='مسح كل البيانات'; 
   clearBtn.onclick=()=>{ 
-    if(confirm('هل أنت متأكد؟ سيتم مسح كل المحاضرات والدكاترة مؤقتًا!')){ 
+    if(confirm('هل أنت متأكد؟ سيتم مسح كل المحاضرات والدكاترة!')){ 
       DATA = {lectures:[], instructors:[], changes:[]}; 
+      saveDataToLocal(); // حفظ محلي
       renderAll(); 
-      recordChange('تم مسح كل البيانات مؤقتًا'); 
-      alert('تم المسح مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+      recordChange('تم مسح كل البيانات'); 
+      alert('تم المسح وحفظه محليًا. للنشر للجميع، استخدم إنشاء كود GitHub.'); 
     } 
   }; 
+  body.appendChild(generateCodeBtn); 
   body.appendChild(importBtn); 
-  body.appendChild(exportBtn); 
+  body.appendChild(exportJsonBtn); 
   body.appendChild(clearBtn); 
 }
 
-/* Edit Modal (مؤقت) */
+/* Edit Modal */
 function openEditModal(lec){
   const root=document.getElementById('modalRoot'); 
   if(!root) return; 
@@ -832,12 +882,10 @@ function openEditModal(lec){
   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal';
-  const hourOptions=HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join(''); 
-  m.innerHTML = '<h3>تعديل المحاضرة (مؤقت)</h3><p class="kv">التعديلات مؤقتة في الذاكرة.</p>';
-  m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+hourOptions+'</select><select id="eStartM" class="input"><option '+((lec.startMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.startMin||0)===30?'selected':'')+' value="30">30</option></select></div></div></div>';
-  m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select><select id="eEndM" class="input"><option '+((lec.endMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.endMin||0)===30?'selected':'')+' value="30">30</option></select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>';
-  m.innerHTML += '<div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="eInst" class="input"><option value="">اختر دكتور (اختياري)</option>'+ (DATA.instructors.map(i=>'<option '+(i.id===lec.instructorId?'selected':'')+' value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join('')) + '</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="eLocation" class="input" value="'+escapeHtml(lec.location||'')+'" /></div></div>';
-  m.innerHTML += '<textarea id="eNotes" class="input">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل (مؤقت)</button></div>';
+  const hourOptions=HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select></div></div>'; 
+  m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select><select id="eEndM" class="input"><option '+((lec.endMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.endMin||0)===30?'selected':'')+' value="30">30</option></select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>'; 
+  m.innerHTML += '<div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="eInst" class="input"><option value="">اختر دكتور (اختياري)</option>'+ (DATA.instructors.map(i=>'<option '+(i.id===lec.instructorId?'selected':'')+' value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join('')) + '</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="eLocation" class="input" value="'+escapeHtml(lec.location||'')+'" /></div></div>'; 
+  m.innerHTML += '<textarea id="eNotes" class="input">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل</button></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block';
@@ -874,22 +922,24 @@ function openEditModal(lec){
       DATA.lectures[idx].instructorId = inst;
       DATA.lectures[idx].location = loc;
       DATA.lectures[idx].notes = notes;
+      saveDataToLocal(); // حفظ محلي
       recordChange('تم تعديل المحاضرة: ' + title);
       renderAll();
-      alert('تم التعديل مؤقتًا في الذاكرة. للـ sharing، عدل DATA في الكود وارفع على GitHub.');
+      alert('تم التعديل وحفظه محليًا. للنشر للجميع، استخدم تصدير كود GitHub.');
     }
     root.style.display='none'; 
     root.innerHTML='';
   };
 }
 
-/* Change log (مؤقت في الذاكرة) */
+/* Change log (محفوظ محليًا) */
 function recordChange(msg){
   try{
     const now = new Date();
     DATA.changes = DATA.changes || [];
     DATA.changes.unshift({ts: now.toISOString(), msg: msg});
     if(DATA.changes.length>300) DATA.changes.length = 300;
+    saveDataToLocal(); // حفظ محلي
     renderChangeLog();
   }catch(e){ console.error('recordChange error:', e); }
 }
@@ -912,7 +962,7 @@ function renderChangeLog(){
       groups[d] = groups[d] || []; 
       groups[d].push(ch); 
     });
-    let html = '<h4>سجل التعديلات المؤقتة</h4><p class="kv">هذا السجل مؤقت ويختفي عند الـ refresh.</p>';
+    let html = '<h4>سجل التعديلات</h4><p class="kv">السجل محفوظ محليًا في متصفحك.</p>';
     if(Object.keys(groups).length===0) { 
       html += '<div class="kv">لم يتم إجراء تعديلات بعد</div>'; 
     } else {
@@ -943,12 +993,12 @@ function initHandlers(){
     const a=document.createElement('a'); 
     const blob=new Blob([JSON.stringify(DATA, null, 2)],{type:'application/json'}); 
     a.href=URL.createObjectURL(blob); 
-    a.download='jadwal-v3-backup.json'; 
+    a.download='jadwal-backup.json'; 
     a.click(); 
-    alert('استخدم هذا الملف لتعديل DATA في الكود، ثم ارفع على GitHub للـ sharing.'); 
+    alert('استخدم هذا الملف للاستيراد أو تعديل DATA في الكود، ثم ارفع على GitHub للـ sharing.'); 
   });
 
-  // Import (مؤقت)
+  // Import (محلي)
   const importBtn = document.getElementById('importBtn');
   if(importBtn) importBtn.addEventListener('click', ()=>{ 
     const inp=document.createElement('input'); 
@@ -963,8 +1013,9 @@ function initHandlers(){
           const newData = JSON.parse(reader.result); 
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
+            saveDataToLocal(); // حفظ محلي
             renderAll(); 
-            alert('تم الاستيراد مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+            alert('تم الاستيراد وحفظه محليًا. للـ sharing، استخدم لوحة الإدارة > استيراد/تصدير > إنشاء كود GitHub.'); 
           } else { 
             alert('الملف غير صحيح'); 
           } 
@@ -1036,6 +1087,7 @@ function renderAll(){
 
 // Initialization
 document.addEventListener('DOMContentLoaded', ()=>{ 
+  loadDataFromLocal(); // حمّل البيانات المحلية أولاً
   initHandlers(); 
   initTabs(); 
   renderAll(); 
@@ -1047,10 +1099,11 @@ document.addEventListener('DOMContentLoaded', ()=>{
 window.jadwal_v3 = { 
   data:()=>JSON.stringify(DATA), 
   clear:()=>{ 
-    if(confirm('مسح كل البيانات مؤقتًا؟')){ 
+    if(confirm('مسح كل البيانات؟')){ 
       DATA={lectures:[], instructors:[], changes:[]}; 
+      saveDataToLocal(); // حفظ محلي
       renderAll(); 
-      alert('تم المسح مؤقتًا. للـ sharing، عدل DATA في الكود وارفع على GitHub.'); 
+      alert('تم المسح وحفظه محليًا. للـ sharing، استخدم لوحة الإدارة > إنشاء كود GitHub.'); 
     } 
   } 
 };
