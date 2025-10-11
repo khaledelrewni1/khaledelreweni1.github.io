@@ -399,12 +399,20 @@ function openEditModal(lec){
     root.style.display='none'; root.innerHTML='';
   };
 }
-function renderAll(){ renderTable(); renderDaysTabs(); renderInstructors(); renderLiveNotice(); }
+function renderAll(){
+  renderTable();
+  renderDaysTabs();
+  renderInstructors();
+  renderLiveNotice();
+  renderChangeLog();
+  updateAdminVisibility();
+}
+
 renderAll();
 setInterval(()=>{ renderAll(); },60000); // refresh each minute
 
 /* expose API */
-window.jadwal_v3 = { data: ()=> JSON.stringify(DATA), clear: ()=>{ if(confirm('مسح كل البيانات؟')){ DATA={lectures:[], instructors:[]}; saveData(DATA); renderAll(); } } };
+window.jadwal_v3 = { data:()=>JSON.stringify(DATA), clear:()=>{ if(confirm('مسح كل البيانات؟')){ DATA={lectures:[], instructors:[]}; saveData(DATA); renderAll(); } } };
 </script>
 </body>
 </html>
