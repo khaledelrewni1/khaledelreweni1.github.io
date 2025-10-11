@@ -626,37 +626,27 @@ function openAdmin(){
     alert('تم حفظ التعديلات محليًا. للنشر للجميع، استخدم تصدير كود GitHub.'); 
     renderAll(); 
   }; 
-  // تعديل: استخدم regular functions عشان 'this' يشتغل صح
-  document.getElementById('tabLect').onclick = function() { 
+  // تصحيح: استخدم functions منفصلة للـ onclick لتجنب التكرار والأخطاء
+  function switchToLect() { 
     document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
-    this.classList.add('active'); 
+    document.getElementById('tabLect').classList.add('active'); 
     renderAdminLectures(); 
-  }; 
-  document.getElementById('tabInst').onclick = function() { 
+  }
+  function switchToInst() { 
     document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
-    this.classList.add('active'); 
+    document.getElementById('tabInst').classList.add('active'); 
     renderAdminInstructors(); 
-  }; 
-  document.getElementById('tabImp').onclick = function() { 
+  }
+  function switchToImp() { 
     document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
-    this.classList.add('active'); 
+    document.getElementById('tabImp').classList.add('active'); 
     renderAdminImportExport(); 
-  }; 
-  loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
+  }
+  document.getElementById('tabLect').onclick = switchToLect;
+  document.getElementById('tabInst').onclick = switchToInst;
+  document.getElementById('tabImp').onclick = switchToImp;
+    loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
   renderAdminLectures(); // افتراضي: المحاضرات
-  }; 
-  document.getElementById('tabInst').onclick=()=>{ 
-    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
-    this.classList.add('active'); 
-    renderAdminInstructors(); 
-  }; 
-  document.getElementById('tabImp').onclick=()=>{ 
-    document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
-    this.classList.add('active'); 
-    renderAdminImportExport(); 
-  }; 
-  loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
-  renderAdminLectures(); 
 }
 
 function renderAdminLectures(){ 
@@ -897,10 +887,15 @@ function openEditModal(lec){
   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal';
-  const hourOptions=HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select></div></div>'; 
-  m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('')+'</select><select id="eEndM" class="input"><option '+((lec.endMin||0)===0?'selected':'')+' value="0">00</option><option '+((lec.endMin||0)===30?'selected':'')+' value="30">30</option></select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>'; 
+  const hourOptions=HOURS.map(h=>'<option '+(h===lec.startHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('');
+  const minuteOptions='<option '+( (lec.startMin||0)===0 ? 'selected' : '' )+' value="0">00</option><option '+( (lec.startMin||0)===30 ? 'selected' : '' )+' value="30">30</option>';
+  m.innerHTML = '<h3>تعديل المحاضرة</h3>';
+  m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+hourOptions+'</select><select id="eStartM" class="input">'+minuteOptions+'</select></div></div></div>';
+  const endMinuteOptions='<option '+( (lec.endMin||0)===0 ? 'selected' : '' )+' value="0">00</option><option '+( (lec.endMin||0)===30 ? 'selected' : '' )+' value="30">30</option>';
+  const endHourOptions=HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('');
+  m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+endHourOptions+'</select><select id="eEndM" class="input">'+endMinuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>'; 
   m.innerHTML += '<div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="eInst" class="input"><option value="">اختر دكتور (اختياري)</option>'+ (DATA.instructors.map(i=>'<option '+(i.id===lec.instructorId?'selected':'')+' value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join('')) + '</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="eLocation" class="input" value="'+escapeHtml(lec.location||'')+'" /></div></div>'; 
-  m.innerHTML += '<textarea id="eNotes" class="input">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل</button></div>'; 
+  m.innerHTML += '<textarea id="eNotes" class="input" placeholder="ملاحظات">'+escapeHtml(lec.notes||'')+'</textarea><div style="display:flex;justify-content:flex-end;gap:8px;margin-top:8px"><button id="cancelEdit" class="btn">إلغاء</button><button id="saveEdit" class="btn">حفظ التعديل</button></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block';
