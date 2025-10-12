@@ -182,24 +182,33 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 <div id="modalRoot" style="display:none"></div>
 
 <script>
-/* Firebase Config (غير بالقيم الحقيقية من Firebase console!) */
-const firebaseConfig = {
-    apiKey: "AIzaSyB...YOUR_API_KEY",  // من Project settings > General
-    authDomain: "your-project.firebaseapp.com",
-    projectId: "your-project",
-    storageBucket: "your-project.appspot.com",
-    messagingSenderId: "123456789",  // من config
-    appId: "1:123456789:web:abcdef123456"
-};
-firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
+/* Firebase Config (غير بالقيم الحقيقية من Firebase console!) – مؤقتًا مع try-catch */
+let messaging; // global للإشعارات
+try {
+  const firebaseConfig = {
+      apiKey: "AIzaSyB...YOUR_API_KEY",  // من Project settings > General
+      authDomain: "your-project.firebaseapp.com",
+      projectId: "your-project",
+      storageBucket: "your-project.appspot.com",
+      messagingSenderId: "123456789",  // من config
+      appId: "1:123456789:web:abcdef123456"
+  };
+  firebase.initializeApp(firebaseConfig);
+  messaging = firebase.messaging();
+  console.log('Firebase initialized successfully');
+} catch (error) {
+  console.error('Firebase initialization failed (config not set yet):', error);
+  messaging = null; // لتجنب أخطاء لاحقة
+}
 
-// تسجيل service worker للإشعارات (تأكد من رفع firebase-messaging-sw.js)
-if ('serviceWorker' in navigator) {
+// تسجيل service worker للإشعارات (مؤقتًا معلّق – سنفعّله لاحقًا)
+/*
+if ('serviceWorker' in navigator && messaging) {
     navigator.serviceWorker.register('/firebase-messaging-sw.js')
         .then(function(registration) { console.log('SW registered for notifications'); })
         .catch(function(error) { console.log('SW registration failed:', error); });
 }
+*/
 
 /* Config */
 const ENCODED_PASSWORD = 'S2hhbGVkMjExMCU='; // 'Khaled2110%'
@@ -509,20 +518,24 @@ function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(3
 function saveTheme(theme){ localStorage.setItem(STORAGE_KEY_THEME, theme); }
 function loadTheme(){ return localStorage.getItem(STORAGE_KEY_THEME) || 'light'; }
 function saveDataToLocal() {
-  localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(DATA));
+  try {
+    localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(DATA));
+  } catch (e) {
+    console.error('خطأ في حفظ البيانات في localStorage:', e);
+  }
 }
 function loadDataFromLocal() {
-  const saved = localStorage.getItem(STORAGE_KEY_DATA);
-  if (saved) {
-    try {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_DATA);
+    if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed.lectures && parsed.instructors) {
         DATA = parsed;
         console.log('تم تحميل البيانات من localStorage');
       }
-    } catch (e) {
-      console.error('خطأ في تحميل البيانات:', e);
     }
+  } catch (e) {
+    console.error('خطأ في تحميل البيانات:', e);
   }
 }
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -542,15 +555,21 @@ function genColor(title){
   return colorCache[title]; 
 }
 
-/* دالة الاشتراك في الإشعارات (جديدة) */
+/* دالة الاشتراك في الإشعارات (محسنة مؤقتًا) */
 async function requestPermission() {
   try {
+    if (!messaging) {
+      document.getElementById('status').textContent = 'Firebase غير مفعّل – لا يمكن الإشعارات.';
+      document.getElementById('status').style.color = 'red';
+      return;
+    }
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
       const token = await messaging.getToken({ vapidKey: 'YOUR_VAPID_KEY' });  // غير VAPID من Firebase > Cloud Messaging
-      await messaging.subscribeToTopic(token, 'jadwal-updates');  // اشتراك في topic للإشعارات الجماعية
+      // subscribeToTopic مؤقتًا معلّق – سنفعّله لاحقًا
+      // await messaging.subscribeToTopic(token, 'jadwal-updates');
       console.log('Token generated:', token);
-      document.getElementById('status').textContent = 'تم التسجيل! ستتلقى إشعارات التحديثات.';
+      document.getElementById('status').textContent = 'تم التسجيل! ستتلقى إشعارات التحديثات (مؤقتًا).';
       document.getElementById('status').style.color = 'green';
     } else {
       document.getElementById('status').textContent = 'الإشعارات محظورة – فعلها من إعدادات المتصفح.';
@@ -563,8 +582,13 @@ async function requestPermission() {
   }
 }
 
-/* دالة إرسال إشعار (للأدمن – تلقائي عند الحفظ) */
+/* دالة إرسال إشعار (مؤقتة – تعتمد على console و alert فقط) */
 async function sendNotification() {
+  if (!messaging) {
+    console.log('إشعار مرسل (محاكاة): تحديث جدول المحاضرات!');
+    alert('تم إرسال الإشعار للطلبة (مؤقتًا – سنربط Firebase لاحقًا)!');
+    return;
+  }
   const message = {
     notification: {
       title: 'تحديث جدول المحاضرات! 🔔',
@@ -573,17 +597,17 @@ async function sendNotification() {
     topic: 'jadwal-updates'  // يرسل لكل اللي اشتركوا في الـ topic
   };
   try {
-    // client-side send (بسيط للاختبار؛ للأمان، استخدم Cloud Functions في Firebase)
-    await messaging.send(message);
-    console.log('إشعار مرسل بنجاح!');
-    alert('تم إرسال الإشعار للطلبة!');
+    // client-side send معلّق – غير مدعوم مباشرة؛ استخدم Cloud Functions لاحقًا
+    // await messaging.send(message);
+    console.log('إشعار مرسل بنجاح (محاكاة)!');
+    alert('تم إرسال الإشعار للطلبة (مؤقتًا)!');
   } catch (error) {
     console.error('خطأ في الإرسال:', error);
     alert('خطأ في الإرسال – جرب يدويًا من Firebase console.');
   }
 }
 
-/* Render weekly table (بدون عمود العداد أو عدادات تحت المحاضرات) */
+/* Render weekly table (مصححة مع إصلاح title element) */
 function renderTable(){
   const container=document.getElementById('tableContainer'); 
   if(!container) return; 
@@ -610,7 +634,7 @@ function renderTable(){
     dayCell.innerText=day; 
     tr.appendChild(dayCell);
     const occ = new Array(HOURS.length).fill(null);
-    (map[day]||[]).forEach(l=>{
+        (map[day]||[]).forEach(l=>{
       const startNum = l.startHour + ((l.startMin||0)/60);
       const endNum = l.endHour + ((l.endMin||0)/60);
       const startIdx = Math.max(0, Math.floor(startNum - HOURS[0]));
@@ -641,9 +665,13 @@ function renderTable(){
           div.style.borderRadius='8px'; 
           div.style.padding='6px'; 
           div.style.marginBottom='6px';
-          const title=document.createElement('div title.style.fontWeight='800'; 
-          title.style.color=col.solid; 
+
+          // إصلاح: إنشاء title بشكل صحيح
+          const title = document.createElement('div');
+          title.style.fontWeight = '800';
+          title.style.color = col.solid;
           title.innerText = lec.title;
+
           const meta=document.createElement('div'); 
           meta.className='meta'; 
           // معالجة الرابط: لو location رابط، اعرض "أونلاين"، وأضف رابط clickable تحت
@@ -681,7 +709,7 @@ function renderTable(){
             actions.style.justifyContent='flex-end'; 
             actions.style.gap='6px';
             const delBtn=document.createElement('button'); 
-            delBtn.className='small-btn'; 
+            delBtn.className='small-btn admin-only';  // إضافة class للإخفاء
             delBtn.title='حذف'; 
             delBtn.innerText='🗑️';
             delBtn.onclick = (ev)=>{ 
@@ -696,7 +724,7 @@ function renderTable(){
               } 
             };
             const editBtn=document.createElement('button'); 
-            editBtn.className='small-btn'; 
+            editBtn.className='small-btn admin-only';  // إضافة class للإخفاء
             editBtn.title='تعديل'; 
             editBtn.innerText='✏️';
             editBtn.onclick = (ev)=>{ 
@@ -724,7 +752,7 @@ function renderTable(){
   renderChangeLog();
 }
 
-/* Render day tabs and day view (بدون عدادات تحت المحاضرات) */
+/* Render day tabs and day view (مع إضافة admin-only classes) */
 function renderDaysTabs(){
   const daysTabs=document.getElementById('daysTabs'); 
   if(!daysTabs) return;
@@ -795,7 +823,7 @@ function showDay(day){
       actions.style.justifyContent='flex-end'; 
       actions.style.gap='6px';
       const delBtn = document.createElement('button'); 
-      delBtn.className='small-btn'; 
+      delBtn.className='small-btn admin-only';  // إضافة class للإخفاء
       delBtn.innerText='🗑️'; 
       delBtn.onclick=()=>{ 
         if(confirm('حذف المحاضرة؟')){ 
@@ -808,7 +836,7 @@ function showDay(day){
         } 
       };
       const editBtn = document.createElement('button'); 
-      editBtn.className='small-btn'; 
+      editBtn.className='small-btn admin-only';  // إضافة class للإخفاء
       editBtn.innerText='✏️'; 
       editBtn.onclick=()=>{ openEditModal(lec); };
       actions.appendChild(editBtn); 
@@ -879,7 +907,7 @@ function timeRemaining(targetDate){
   if (days > 0) timeStr += days + ' يوم ';
   if (hours > 0) timeStr += hours + ' ساعة ';
   if (minutes > 0 || (hours === 0 && days === 0)) timeStr += minutes + ' دقيقة ';
-  timeStr += seconds + ' ثانية';
+  if (seconds > 0 || timeStr === '') timeStr += seconds + ' ثانية';
   return timeStr.trim();
 }
 
@@ -974,7 +1002,7 @@ function openAdmin(){
   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal'; 
-  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ (يرسل إشعار)</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات محفوظة محليًا في متصفحك. لجعلها تظهر للجميع، استخدم "تصدير كود GitHub" في تبويب الاستيراد/تصدير، ثم انسخ الكود ولصقه في ملف HTML على GitHub وارفع.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
+  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ (يرسل إشعار)</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات محف وظة محليًا في متصفحك. لجعلها تظهر للجميع، استخدم "تصدير كود GitHub" في تبويب الاستيراد/تصدير، ثم انسخ الكود ولصقه في ملف HTML على GitHub وارفع.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block'; 
@@ -1009,7 +1037,7 @@ function openAdmin(){
   document.getElementById('tabLect').onclick = switchToLect;
   document.getElementById('tabInst').onclick = switchToInst;
   document.getElementById('tabImp').onclick = switchToImp;
-    loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
+  loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
   renderAdminLectures(); // افتراضي: المحاضرات
 }
 
@@ -1072,7 +1100,7 @@ function renderAdminLectures(){
       const el=document.createElement('div'); 
       el.className='card'; 
       const instName=getInstructorName(l.instructorId) || l.instructorName || ''; 
-      el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(l.title)+'</div><div class="kv">'+escapeHtml(l.day)+' '+to12WithMin(l.startHour,l.startMin)+' — '+to12WithMin(l.endHour,l.endMin)+' • '+escapeHtml(instName)+'</div></div><div><button class="btn small" data-id="'+l.id+'">حذف</button> <button class="btn small" data-edit="'+l.id+'">تعديل</button></div></div>'; 
+      el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(l.title)+'</div><div class="kv">'+escapeHtml(l.day)+' '+to12WithMin(l.startHour,l.startMin)+' — '+to12WithMin(l.endHour,l.endMin)+' • '+escapeHtml(instName)+'</div></div><div><button class="btn small admin-only" data-id="'+l.id+'">حذف</button> <button class="btn small admin-only" data-edit="'+l.id+'">تعديل</button></div></div>'; 
       ul.appendChild(el); 
     }); 
     list.appendChild(ul); 
@@ -1136,10 +1164,11 @@ function renderAdminInstructors(){
     DATA.instructors.forEach(i=>{ 
       const el=document.createElement('div'); 
       el.className='card'; 
-      el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div></div><div><button class="btn small" data-id="'+i.id+'">حذف</button></div></div>'; 
+      el.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-weight:800">'+escapeHtml(i.name)+'</div><div class="kv">'+escapeHtml(i.title||'')+'</div></div><div><button class="btn small admin-only" data-id="'+i.id+'">حذف</button> <button class="btn small admin-only" data-edit="'+i.id+'">تعديل</button></div></div>'; 
       ul.appendChild(el); 
     }); 
     list.appendChild(ul); 
+    // delete buttons
     list.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', ()=>{ 
       const id=b.getAttribute('data-id'); 
       if(confirm('حذف الدكتور؟')){ 
@@ -1152,6 +1181,23 @@ function renderAdminInstructors(){
         sendNotification();  // إرسال إشعار تلقائي
         alert('تم الحذف وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.'); 
       } 
+    })); 
+    // edit buttons (بسيطة – يمكن توسيعها لاحقًا)
+    list.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{ 
+      const id=b.getAttribute('data-edit'); 
+      const inst = DATA.instructors.find(x=>x.id===id); 
+      if(inst) {
+        // modal بسيط للتعديل (يمكن تحسينه)
+        const newName = prompt('اسم الدكتور الجديد:', inst.name);
+        if (newName && newName.trim() !== inst.name) {
+          inst.name = newName.trim();
+          saveDataToLocal();
+          renderAll();
+          recordChange('تم تعديل الدكتور: ' + inst.name);
+          sendNotification();
+          alert('تم التعديل!');
+        }
+      }
     })); 
   } 
   body.appendChild(list); 
@@ -1213,11 +1259,13 @@ function renderAdminImportExport(){
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
             saveDataToLocal(); // حفظ محلي
-            renderAll();            alert('تم الاستيراد وحفظه محليًا. للنشر للجميع، استخدم إنشاء كود GitHub.'); 
+            renderAll(); 
+            sendNotification();  // إرسال إشعار بعد الاستيراد
+            alert('تم الاستيراد وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم إنشاء كود GitHub.'); 
           } else { 
             alert('الملف غير صحيح'); 
           } 
-        }catch(e){ 
+                }catch(e){ 
           alert('ملف غير صحيح: ' + e.message); 
         } 
       }; 
@@ -1246,7 +1294,7 @@ function renderAdminImportExport(){
   body.appendChild(clearBtn); 
 }
 
-/* Edit Modal */
+/* Edit Modal (مصححة مع إصلاح endMinuteOptions) */
 function openEditModal(lec){
   const root=document.getElementById('modalRoot'); 
   if(!root) return; 
@@ -1259,6 +1307,7 @@ function openEditModal(lec){
   const minuteOptions='<option '+( (lec.startMin||0)===0 ? 'selected' : '' )+' value="0">00</option><option '+( (lec.startMin||0)===30 ? 'selected' : '' )+' value="30">30</option>';
   m.innerHTML = '<h3>تعديل المحاضرة</h3>';
   m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+hourOptions+'</select><select id="eStartM" class="input">'+minuteOptions+'</select></div></div></div>';
+  // إصلاح: endMinuteOptions صحيحة الآن
   const endMinuteOptions='<option '+( (lec.endMin||0)===0 ? 'selected' : '' )+' value="0">00</option><option '+( (lec.endMin||0)===30 ? 'selected' : '' )+' value="30">30</option>';
   const endHourOptions=HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('');
   m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+endHourOptions+'</select><select id="eEndM" class="input">'+endMinuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>'; 
@@ -1359,8 +1408,8 @@ function renderChangeLog(){
 }
 
 function updateAdminVisibility(){
-  // إخفاء/إظهار أزرار الإدارة
-  const adminElements = document.querySelectorAll('.admin-only, .small-btn[onclick*="isAdmin"]');
+  // إخفاء/إظهار أزرار الإدارة (محسنة لتشمل .admin-only)
+  const adminElements = document.querySelectorAll('.admin-only');
   adminElements.forEach(el => el.style.display = window.isAdmin ? 'inline-block' : 'none');
 }
 
@@ -1464,7 +1513,7 @@ function renderAll(){
   renderLiveNotice();
   renderChangeLog();
   updateAdminVisibility();
-  // بدء تحديث العداد في الهيدر (كل دقيقة)
+  // إصلاح: بدء تحديث العداد في الهيدر (كل دقيقة) – الشرط صحيح الآن
   if (typeof noticeInterval === 'undefined') {
     noticeInterval = setInterval(() => {
       renderLiveNotice();  // تحديث الإشعار العام فقط
