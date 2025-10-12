@@ -69,7 +69,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 .notice-small{font-size:13px;color:rgba(255,255,255,0.9);opacity:0.95;margin-top:6px}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
-/* إضافات للعداد المتقدم */
+/* إضافات للعداد المتقدم في الهيدر */
 .live-countdown {
   animation: pulse 2s infinite;
 }
@@ -224,8 +224,7 @@ let DATA = {
     "instructorName": null,
     "location": ".",
     "notes": "",
-    "link": ""
-  },
+    "link": ""  },
   {
     "id": "idmgmpsz94t0e99l6",
     "day": "الأحد",
@@ -247,7 +246,7 @@ let DATA = {
     "startMin": 0,
     "endHour": 22,
     "endMin": 0,
-    "title": "قضايا مجتعمية",
+    "title": "قضايا مجتمعية",
     "instructorId": "idmgmpq3h21xx212z",
     "instructorName": null,
     "location": ".",
@@ -269,7 +268,7 @@ let DATA = {
     "link": ""
   },
   {
-        "id": "idmgmpv1ngk5va8mo",
+    "id": "idmgmpv1ngk5va8mo",
     "day": "الأحد",
     "startHour": 11,
     "startMin": 0,
@@ -349,7 +348,21 @@ let DATA = {
     "instructorId": "idmgmprrsmw1qub9g",
     "instructorName": null,
     "location": ".",
-        "notes": "",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq7f7285cuk9i",
+    "day": "الخميس",
+    "startHour": 18,
+    "startMin": 0,
+    "endHour": 19,
+    "endMin": 0,
+    "title": "لغة إنجليزية 2",
+    "instructorId": "idmgmq6jaotttg27g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
     "link": ""
   }
 ],
@@ -461,6 +474,35 @@ function displayHour(h) {
   return hh + ' ' + period;
 }
 
+/* دالة للحصول على التاريخ والوقت الحالي بتوقيت القاهرة (مصر، UTC+2) */
+function getCairoTime() {
+  const now = new Date();
+  const cairoTime = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Cairo',
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false
+  }).formatToParts(now);
+  const year = parseInt(cairoTime.find(p => p.type === 'year').value);
+  const month = parseInt(cairoTime.find(p => p.type === 'month').value) - 1; // JS months 0-based
+  const day = parseInt(cairoTime.find(p => p.type === 'day').value);
+  const hour = parseInt(cairoTime.find(p => p.type === 'hour').value);
+  const minute = parseInt(cairoTime.find(p => p.type === 'minute').value);
+  const second = parseInt(cairoTime.find(p => p.type === 'second').value);
+  return new Date(year, month, day, hour, minute, second);
+}
+
+/* دالة للحصول على رقم اليوم في الأسبوع بتوقيت القاهرة (السبت = 0) */
+function getCairoDayIndex() {
+  const cairoNow = getCairoTime();
+  let jsDay = cairoNow.getDay(); // JS: Sunday=0, Saturday=6
+  return (jsDay + 1) % 7; // تحويل: Saturday=0, Sunday=1, ..., Friday=6
+}
+
 /* Data helpers (حفظ/تحميل من localStorage للثبات المحلي) */
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,9); }
 function saveTheme(theme){ localStorage.setItem(STORAGE_KEY_THEME, theme); }
@@ -540,7 +582,7 @@ async function sendNotification() {
   }
 }
 
-/* Render weekly table (مع إضافة عمود العداد الجديد) */
+/* Render weekly table (بدون عمود العداد أو عدادات تحت المحاضرات) */
 function renderTable(){
   const container=document.getElementById('tableContainer'); 
   if(!container) return; 
@@ -549,8 +591,7 @@ function renderTable(){
   table.className='table';
   const thead=document.createElement('thead'); 
   const headRow=document.createElement('tr'); 
-  headRow.appendChild(document.createElement('th'));  // عمود اليوم
-  headRow.innerHTML += '<th>عداد الوقت</th>';  // عمود العداد الجديد
+  headRow.appendChild(document.createElement('th'));  // عمود اليوم فقط
   HOURS.forEach((h,idx)=>{
     const th=document.createElement('th'); 
     const next = HOURS[idx+1] || (h+1); 
@@ -567,9 +608,6 @@ function renderTable(){
     const dayCell=document.createElement('th'); 
     dayCell.innerText=day; 
     tr.appendChild(dayCell);
-    const countdownCell = document.createElement('td');  // خلية العداد لليوم كله
-    countdownCell.innerHTML = '<div class="live-countdown" id="dayCountdown-' + day + '">حساب...</div>';  // عداد لليوم
-    tr.appendChild(countdownCell);
     const occ = new Array(HOURS.length).fill(null);
     (map[day]||[]).forEach(l=>{
       const startNum = l.startHour + ((l.startMin||0)/60);
@@ -602,33 +640,36 @@ function renderTable(){
           div.style.borderRadius='8px'; 
           div.style.padding='6px'; 
           div.style.marginBottom='6px';
-          const title=document.createElement('div'); 
-          title.style.fontWeight='800'; 
+          const title=document.createElement('div          title.style.fontWeight='800'; 
           title.style.color=col.solid; 
           title.innerText = lec.title;
           const meta=document.createElement('div'); 
           meta.className='meta'; 
-          meta.innerText = (getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
+          // معالجة الرابط: لو location رابط، اعرض "أونلاين"، وأضف رابط clickable تحت
+          let locationText = lec.location || 'غير محدد';
+          let isLink = false;
+          if (lec.location && (lec.location.startsWith('http://') || lec.location.startsWith('https://'))) {
+            locationText = 'أونلاين';
+            isLink = true;
+          }
+          meta.innerText = (getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + locationText;
           const timeEl=document.createElement('div'); 
           timeEl.className='meta'; 
           timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
-          // إضافة العداد لكل محاضرة (ديناميكي)
-          const countdownEl = document.createElement('div');
-          countdownEl.className = 'kv live-countdown';
-          countdownEl.id = 'countdown-' + lec.id;
-          countdownEl.innerText = 'حساب...';
-          updateCountdownForLecture(lec.id, countdownEl);  // حساب فوري
           div.appendChild(title); 
           div.appendChild(meta); 
-                    div.appendChild(timeEl);
-          div.appendChild(countdownEl);  // إضافة العداد داخل السلوت
-          if(lec.link){ 
+          div.appendChild(timeEl);
+          // إضافة رابط clickable إذا كان رابط
+          if (isLink) {
             const a=document.createElement('a'); 
-            a.href=lec.link; 
+            a.href=lec.location; 
             a.target='_blank'; 
             a.innerText='رابط المحاضرة'; 
             a.style.display='block'; 
             a.style.marginTop='6px'; 
+            a.style.color = col.solid;
+            a.style.textDecoration = 'none';
+            a.style.fontSize = '12px';
             div.appendChild(a); 
           }
           // admin actions
@@ -680,95 +721,9 @@ function renderTable(){
   renderLegend();
   renderLiveNotice();
   renderChangeLog();
-  updateCountdownForAllLectures();  // تحديث جميع العدادات في الجدول
 }
 
-/* دالة تحديث العداد لمحاضرة واحدة (ديناميكية) */
-function updateCountdownForLecture(lecId, element) {
-  const lec = DATA.lectures.find(l => l.id === lecId);
-  if (!lec) return;
-  
-  const now = new Date();
-  const todayIndex = now.getDay();
-  const today = DAYS[(todayIndex + 6) % 7];  // تحويل للأيام (السبت = 0 في JS يصبح الأحد، لذا +6 %7)
-  const dayIndex = DAYS.indexOf(lec.day);
-  let targetDate = new Date(now);
-  
-  // حساب التاريخ المستقبلي (أقرب يوم مطابق، يبدأ من السبت)
-  const daysDiff = (dayIndex - (todayIndex + 6) % 7 + 7) % 7;
-  targetDate.setDate(now.getDate() + daysDiff);
-  targetDate.setHours(lec.startHour, lec.startMin || 0, 0, 0);
-  
-  const diff = targetDate - now;
-  let timeStr = '';
-  if (diff > 0) {
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    if (days > 0) timeStr += days + ' يوم ';
-    if (hours > 0) timeStr += hours + ' ساعة ';
-    if (minutes > 0 || (hours === 0 && days === 0)) timeStr += minutes + ' دقيقة ';
-    timeStr += seconds + ' ثانية';
-    element.innerText = 'بعد ' + timeStr.trim();
-    element.classList.add('live-countdown');
-    if (diff < 300000) {  // أقل من 5 دقائق
-      element.classList.add('upcoming-soon');
-    } else {
-      element.classList.remove('upcoming-soon');
-    }
-  } else if (isNowInLecture(lec)) {
-    element.innerText = 'الآن جارية';
-    element.classList.add('current');
-  } else {
-    element.innerText = 'انتهت';
-    element.classList.remove('live-countdown', 'upcoming-soon', 'current');
-  }
-}
-
-/* دالة تحديث جميع العدادات في الجدول (كل دقيقة) */
-function updateCountdownForAllLectures() {
-  DATA.lectures.forEach(lec => {
-    const element = document.getElementById('countdown-' + lec.id);
-    if (element) {
-      updateCountdownForLecture(lec.id, element);
-    }
-  });
-    // تحديث عداد اليوم في الجدول
-  DAYS.forEach(day => {
-    const dayElement = document.getElementById('dayCountdown-' + day);
-    if (dayElement) {
-      // حساب أقرب محاضرة في اليوم
-      const dayLectures = DATA.lectures.filter(l => l.day === day);
-      if (dayLectures.length > 0) {
-        const now = new Date();
-        const todayIndex = now.getDay();
-        const dayIndex = DAYS.indexOf(day);
-        let targetDate = new Date(now);
-        const daysDiff = (dayIndex - (todayIndex + 6) % 7 + 7) % 7;
-        targetDate.setDate(now.getDate() + daysDiff);
-        const nextLecture = dayLectures.find(l => {
-          const lecDate = new Date(targetDate);
-          lecDate.setHours(l.startHour, l.startMin || 0, 0, 0);
-          return lecDate > now;
-        });
-        if (nextLecture) {
-          const lecDate = new Date(targetDate);
-          lecDate.setHours(nextLecture.startHour, nextLecture.startMin || 0, 0, 0);
-          const diff = lecDate - now;
-          dayElement.innerText = 'اليوم: ' + timeRemaining(lecDate);
-        } else {
-          dayElement.innerText = 'اليوم: انتهت المحاضرات';
-        }
-      } else {
-        dayElement.innerText = 'اليوم: لا توجد محاضرات';
-      }
-    }
-  });
-}
-
-/* Render day tabs and day view (مع إضافة العداد تحت كل محاضرة) */
+/* Render day tabs and day view (بدون عدادات تحت المحاضرات) */
 function renderDaysTabs(){
   const daysTabs=document.getElementById('daysTabs'); 
   if(!daysTabs) return;
@@ -780,9 +735,9 @@ function renderDaysTabs(){
     btn.onclick=()=> showDay(d); 
     daysTabs.appendChild(btn); 
   });
-  // activate today by default (يبدأ من السبت)
-  const todayIndex = new Date().getDay(); 
-  const today = DAYS[(todayIndex + 6) % 7]; // تحويل ليتناسب مع DAYS (السبت=0)
+  // activate today by default (بتوقيت القاهرة)
+  const todayIndex = getCairoDayIndex();
+  const today = DAYS[todayIndex];
   showDay(today);
 }
 
@@ -805,27 +760,30 @@ function showDay(day){
     title.innerText=lec.title;
     const meta=document.createElement('div'); 
     meta.className='kv'; 
-    meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + (lec.location|| (lec.link? 'أونلاين':'غير محدد'));
+    // معالجة الرابط: لو location رابط، اعرض "أونلاين"، وأضف رابط clickable تحت
+    let locationText = lec.location || 'غير محدد';
+    let isLink = false;
+    if (lec.location && (lec.location.startsWith('http://') || lec.location.startsWith('https://'))) {
+      locationText = 'أونلاين';
+      isLink = true;
+    }
+    meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + locationText;
     const timeEl=document.createElement('div'); 
     timeEl.className='kv'; 
     timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
-    // إضافة العداد تحت الوقت (ديناميكي)
-    const countdownEl = document.createElement('div');
-    countdownEl.className = 'kv live-countdown';
-    countdownEl.id = 'dayCountdown-' + lec.id;
-    countdownEl.innerText = 'حساب...';
-    updateCountdownForLecture(lec.id, countdownEl);  // حساب فوري
     card.appendChild(title); 
     card.appendChild(meta); 
     card.appendChild(timeEl);
-    card.appendChild(countdownEl);  // إضافة العداد
-    if(lec.link){ 
+    // إضافة رابط clickable إذا كان رابط
+    if (isLink) {
       const a=document.createElement('a'); 
-      a.href=lec.link; 
+      a.href=lec.location; 
       a.target='_blank'; 
       a.innerText='رابط المحاضرة'; 
       a.style.display='block'; 
       a.style.marginTop='6px'; 
+      a.style.color = 'var(--accent1)';
+      a.style.textDecoration = 'none';
       card.appendChild(a); 
     }
     // admin actions
@@ -859,7 +817,6 @@ function showDay(day){
     if(isNowInLecture(lec)) card.classList.add('current');
     container.appendChild(card);
   });
-  updateCountdownForAllLectures();  // تحديث العدادات في day tab
 }
 
 /* Render instructors */
@@ -895,23 +852,24 @@ function renderLegend(){
   }); 
 }
 
-/* Live check */
+/* Live check (بتوقيت القاهرة) */
 function isNowInLecture(lec){ 
   if(!lec) return false; 
-  const now=new Date(); 
-  const todayIndex = now.getDay(); 
-  const today = DAYS[(todayIndex + 6) % 7]; 
+  const cairoNow = getCairoTime();
+  const todayIndex = getCairoDayIndex();
+  const today = DAYS[todayIndex]; 
   if(lec.day !== today) return false; 
-  const start=new Date(now); 
+  const start=new Date(cairoNow); 
   start.setHours(lec.startHour, lec.startMin||0,0,0); 
-  const end=new Date(now); 
+  const end=new Date(cairoNow); 
   end.setHours(lec.endHour, lec.endMin||0,0,0); 
-  return now>=start && now<end; 
+  return cairoNow>=start && cairoNow<end; 
 }
 
 /* دالة timeRemaining (للعداد – محسنة لليوم/ساعة/دقيقة/ثانية) */
 function timeRemaining(targetDate){ 
-  const diff = Math.max(0, targetDate - new Date()); 
+  const cairoNow = getCairoTime();
+  const diff = Math.max(0, targetDate - cairoNow); 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -924,19 +882,19 @@ function timeRemaining(targetDate){
   return timeStr.trim();
 }
 
-/* دالة عرض الإشعار العام في الهيدر (بدلاً من "لا توجد محاضرات الآن") */
+/* دالة عرض الإشعار العام في الهيدر (بتوقيت القاهرة) */
 function renderLiveNotice() {
   const noticeEl = document.getElementById('liveNotice');
   if (!noticeEl) return;
   
-  const now = new Date();
-  const todayIndex = now.getDay();
-  const today = DAYS[(todayIndex + 6) % 7];
+  const cairoNow = getCairoTime();
+  const todayIndex = getCairoDayIndex();
+  const today = DAYS[todayIndex];
   const todayLectures = DATA.lectures.filter(l => l.day === today);
   
   if (todayLectures.length === 0) {
     noticeEl.innerText = 'لا توجد محاضرات اليوم';
-    noticeEl.classList.remove('live-countdown', 'upcoming-soon');
+    noticeEl.classList.remove('live-countdown', 'upcoming-soon', 'current');
     return;
   }
   
@@ -948,16 +906,16 @@ function renderLiveNotice() {
   } else {
     // أقرب محاضرة اليوم
     const nextLecture = todayLectures.find(l => {
-      const lecDate = new Date(now);
+      const lecDate = new Date(cairoNow);
       lecDate.setHours(l.startHour, l.startMin || 0, 0, 0);
-      return lecDate > now;
+      return lecDate > cairoNow;
     });
     if (nextLecture) {
-      const lecDate = new Date(now);
+      const lecDate = new Date(cairoNow);
       lecDate.setHours(nextLecture.startHour, nextLecture.startMin || 0, 0, 0);
-      noticeEl.innerText = `${nextLecture.title}: ${timeRemaining(lecDate)}`;
+      noticeEl.innerText = `${nextLecture.title}: بعد ${timeRemaining(lecDate)}`;
       noticeEl.classList.add('live-countdown');
-      const diff = lecDate - now;
+      const diff = lecDate - cairoNow;
       if (diff < 300000) {  // أقل من 5 دقائق
         noticeEl.classList.add('upcoming-soon');
       } else {
@@ -993,7 +951,7 @@ function openAdminFlow(){
       window.isAdmin = true; 
       root.style.display='none'; 
       root.innerHTML=''; 
-      openAdmin();      updateAdminVisibility(); 
+      openAdmin(); updateAdminVisibility(); 
       recordChange('الأدمن دخل لوحة التحكم'); 
       console.log('Admin login successful'); // log للأمان
     } else { 
@@ -1062,7 +1020,7 @@ function renderAdminLectures(){
   const hourOptions=HOURS.map(h=>'<option value="'+h+'">'+to12(h)+'</option>').join(''); 
   const minuteOptions='<option value="0">00</option><option value="30">30</option>'; 
   const instOptions='<option value="">اختر دكتور (اختياري)</option>'+DATA.instructors.map(i=>'<option value="'+i.id+'">'+escapeHtml(i.name)+'</option>').join(''); 
-   form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; 
+  form.innerHTML='<div class="row"><div class="col"><label class="kv">اليوم</label><select id="fDay" class="input">'+DAYS.map(d=>'<option value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="fStartH" class="input">'+hourOptions+'</select><select id="fStartM" class="input">'+minuteOptions+'</select></div></div></div><div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="fEndH" class="input">'+hourOptions+'</select><select id="fEndM" class="input">'+minuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="fTitle" class="input" placeholder="اسم المادة" required /></div></div><div style="margin-top:8px" class="row"><div class="col"><label class="kv">الدكتور (اختياري)</label><select id="fInst" class="input">'+instOptions+'</select></div><div class="col"><label class="kv">المكان أو رابط</label><input id="fLocation" class="input" placeholder="المكان (قاعة) أو رابط المحاضرة" /></div></div><textarea id="fNotes" class="input" placeholder="ملاحظات"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف المحاضرة</button></div>'; 
   body.appendChild(form); 
   form.onsubmit=(e)=>{ 
     e.preventDefault(); 
@@ -1456,7 +1414,7 @@ function initHandlers(){
     const printStyles = `
       body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; padding: 16px; }
       table { width: 100%; border-collapse: collapse; }
-      th, td { border:      1px solid #ccc; padding: 6px; text-align: center; }
+      th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
       th { background: #f0f0f0; }
       .slot { padding: 4px; border-radius: 4px; margin: 2px; }
       .current { outline: 2px solid #7c3aed; }
@@ -1505,11 +1463,10 @@ function renderAll(){
   renderLiveNotice();
   renderChangeLog();
   updateAdminVisibility();
-  // بدء تحديث العدادات الديناميكية (كل دقيقة)
-  if (typeof countdownInterval === 'undefined') {
-    countdownInterval = setInterval(() => {
-      updateCountdownForAllLectures();
-      renderLiveNotice();  // تحديث الإشعار العام أيضًا
+  // بدء تحديث العداد في الهيدر (كل دقيقة)
+  if (typeof noticeInterval === 'undefined') {
+    noticeInterval = setInterval(() => {
+      renderLiveNotice();  // تحديث الإشعار العام فقط
     }, 60000);  // كل دقيقة
   }
 }
@@ -1520,7 +1477,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initHandlers(); 
   initTabs(); 
   renderAll(); 
-  // حدث الإشعار كل دقيقة للكشف عن تغييرات جديدة (العداد الداخلي كل ثانية للـ liveNotice)
+  // حدث الإشعار كل دقيقة للكشف عن تغييرات جديدة
   setInterval(renderLiveNotice, 60000);
 });
 
@@ -1538,8 +1495,8 @@ window.jadwal_v3 = {
   } 
 };
 
-// متغير عالمي للـ interval (للعداد)
-let countdownInterval;
+// متغير عالمي للـ interval (للعداد في الهيدر)
+let noticeInterval;
 </script>
 </body>
 </html>
