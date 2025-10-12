@@ -186,13 +186,14 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 let messaging; // global للإشعارات
 try {
   const firebaseConfig = {
-      apiKey: "AIzaSyB...YOUR_API_KEY",  // من Project settings > General
-      authDomain: "your-project.firebaseapp.com",
-      projectId: "your-project",
-      storageBucket: "your-project.appspot.com",
-      messagingSenderId: "123456789",  // من config
-      appId: "1:123456789:web:abcdef123456"
-  };
+  apiKey: "AIzaSyCNxv8rljPPLks03giwrjrIv018MdZkSoM",
+  authDomain: "jadwal-app-12d0c.firebaseapp.com",
+  projectId: "jadwal-app-12d0c",
+  storageBucket: "jadwal-app-12d0c.firebasestorage.app",
+  messagingSenderId: "599880482581",
+  appId: "1:599880482581:web:21d65c1aacfa68b83d331c",
+  measurementId: "G-LM8SPG04XK"
+};
   firebase.initializeApp(firebaseConfig);
   messaging = firebase.messaging();
   console.log('Firebase initialized successfully');
