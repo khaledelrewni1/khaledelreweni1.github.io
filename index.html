@@ -566,7 +566,7 @@ async function requestPermission() {
     }
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const token = await messaging.getToken({ vapidKey: 'YOUR_VAPID_KEY' });  // غير VAPID من Firebase > Cloud Messaging
+      const token = await messaging.getToken({ vapidKey: 'BOcsE4nI5fIDQW8hFa-43M1IGZUAl13oDNaI5MkTR8BCvy9CVoExINdp9xLg_PLaWWyL-dsJHPmAlccuS2Xt7vs' });  // غير VAPID من Firebase > Cloud Messaging
       // subscribeToTopic مؤقتًا معلّق – سنفعّله لاحقًا
       // await messaging.subscribeToTopic(token, 'jadwal-updates');
       console.log('Token generated:', token);
