@@ -151,7 +151,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
     </div>
    <div class="controls">
   <div id="liveNotice" class="info-badge">حساب...</div>
-  <button id="subscribeBtn" onclick="requestPermission()">فعل الإشعارات 🔔</button>
+<button id="subscribeBtn">فعل الإشعارات 🔔</button>
   <span id="status"></span>
   <div style="display:flex;gap:8px;align-items:center">
     <button id="exportBtn" class="small-btn" title="تصدير JSON">تصدير</button>
@@ -1538,6 +1538,29 @@ window.addEventListener('beforeunload', () => {
   if (typeof noticeInterval !== 'undefined') clearInterval(noticeInterval);
   if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
 });
+</script>
+  <script>
+  // تأكد إن OneSignal تم تحميله
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    console.log("✅ OneSignal جاهز");
+
+    // عند الضغط على الزر، يظهر نافذة تفعيل الإشعارات
+    document.getElementById("subscribeBtn").addEventListener("click", async () => {
+      try {
+        await OneSignal.Slidedown.promptPush();
+        const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+        if (isSubscribed) {
+          document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
+        } else {
+          document.getElementById("status").textContent = "🚫 تم رفض الإشعارات.";
+        }
+      } catch (err) {
+        console.error("خطأ أثناء التفعيل:", err);
+        document.getElementById("status").textContent = "⚠️ حدث خطأ أثناء التفعيل.";
+      }
+    });
+  });
 </script>
 </body>
 </html>
