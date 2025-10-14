@@ -552,8 +552,10 @@ function genColor(title){
 /* دالة الاشتراك في الإشعارات (محسنة مع error handling وتحديث token) */
 // ✅ دالة الاشتراك في الإشعارات باستخدام OneSignal
 async function requestPermission() {
+  console.log('جاري محاولة تفعيل OneSignal...');
   const OneSignal = window.OneSignal;
   if (!OneSignal) {
+    console.error("OneSignal غير موجود!");
     alert("❌ OneSignal لم يتم تحميله بشكل صحيح!");
     return;
   }
@@ -1528,9 +1530,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     }, 1000);  // كل ثانية للدقة في الثواني
   }
   // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
-  if (messaging && Notification.permission === 'granted') {
-  requestPermission();  // تحديث الـ token تلقائيًا
-}
+  if (Notification.permission === 'granted') {
+    requestPermission();  // تحديث الـ token تلقائيًا
+  }
 });
 
 // تنظيف الـ intervals عند إغلاق الصفحة (اختياري للأداء)
