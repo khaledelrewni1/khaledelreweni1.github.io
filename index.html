@@ -4,11 +4,34 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>📘 جدول المحاضرات</title>
+  <!-- ✅ OneSignal Web Push SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "04cefa8b-0ddf-48b6-bb39-b6e53b1d31b5", // ✅ ده App ID بتاعك من OneSignal
+      allowLocalhostAsSecureOrigin: true, // علشان تجرب على اللاب أو localhost
+      notifyButton: {
+        enable: true,
+        size: 'medium',
+        theme: 'default',
+        text: {
+          'tip.state.unsubscribed': 'تفعيل الإشعارات',
+          'tip.state.subscribed': 'الإشعارات مفعلة ✅',
+          'message.prenotify': 'اضغط لتفعيل إشعارات الجدول',
+        },
+        position: 'bottom-right'
+      },
+      welcomeNotification: {
+        title: "📘 جدول المحاضرات",
+        message: "تم تفعيل الإشعارات بنجاح 🎉",
+      },
+    });
+  });
+</script>
 <link rel="icon" href="icons/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
-<!-- Firebase SDK للإشعارات -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <style>
 :root{
   --accent1:#60a5fa; --accent2:#7c3aed;
@@ -129,7 +152,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
     <div class="controls">
       <div id="liveNotice" class="info-badge">حساب...</div>
       <!-- الزر الجديد: مطابق للتصميم (داخل controls مع gap) -->
-      <button id="subscribeBtn" onclick="requestPermission()">فعل الإشعارات 🔔</button>
+<button id="subscribeBtn" onclick="OneSignal.showSlidedownPrompt()">فعل الإشعارات 🔔</button>
       <span id="status"></span> <!-- status هنا للعرض -->
       <div style="display:flex;gap:8px;align-items:center">
         <button id="exportBtn" class="small-btn" title="تصدير JSON">تصدير</button>
@@ -182,49 +205,6 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 <div id="modalRoot" style="display:none"></div>
 
 <script>
-/* Firebase Config (غير بالقيم الحقيقية من Firebase console!) – مؤقتًا مع try-catch */
-let messaging; // global للإشعارات
-const SERVER_KEY = 'YOUR_ACTUAL_SERVER_KEY_HERE'; // غيّر ده بـ Server Key الحقيقي من Firebase Console > Project Settings > Cloud Messaging > Server key
-try {
-  const firebaseConfig = {
-    apiKey: "AIzaSyCNxv8rljPPLks03giwrjrIv018MdZkSoM",
-    authDomain: "jadwal-app-12d0c.firebaseapp.com",
-    projectId: "jadwal-app-12d0c",
-    storageBucket: "jadwal-app-12d0c.firebasestorage.app",
-    messagingSenderId: "599880482581",
-    appId: "1:599880482581:web:21d65c1aacfa68b83d331c",
-  measurementId: "G-LM8SPG04XK"
-  };
-  try {
-  firebase.initializeApp(firebaseConfig);
-  messaging = firebase.messaging();
-  console.log('Firebase initialized successfully:', messaging);
-} catch (error) {
-  console.error('Firebase initialization failed:', error);
-}
-  // Foreground messages (إشعارات داخل الصفحة عندما تكون مفتوحة)
-  messaging.onMessage((payload) => {
-    console.log('Foreground message: ', payload);
-    // عرض alert أو toast في الصفحة (يمكن تخصيصه لاحقًا)
-    alert(payload.notification?.body || 'تحديث جديد في الجدول!');
-  });
-
-} catch (error) {
-  console.error('Firebase initialization failed (config not set yet):', error);
-  messaging = null; // لتجنب أخطاء لاحقة
-}
-
-// تسجيل service worker للإشعارات (مع try-catch للأمان)
-if ('serviceWorker' in navigator && messaging) {
-  navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    .then((registration) => {
-      console.log('Service Worker registered successfully:', registration);
-    })
-    .catch((error) => {
-      console.error('Service Worker registration failed:', error);
-    });
-}
-
 /* Config */
 const ENCODED_PASSWORD = 'S2hhbGVkMjExMCU='; // 'Khaled2110%'
 const ADMIN_PASSWORD = atob(ENCODED_PASSWORD); // decode عند التشغيل
@@ -571,56 +551,47 @@ function genColor(title){
 }
 
 /* دالة الاشتراك في الإشعارات (محسنة مع error handling وتحديث token) */
+// ✅ دالة الاشتراك في الإشعارات باستخدام OneSignal
 async function requestPermission() {
+  const OneSignal = window.OneSignal;
+  if (!OneSignal) {
+    alert("❌ OneSignal لم يتم تحميله بشكل صحيح!");
+    return;
+  }
+
   try {
-    if (!messaging) {
-      console.error('Messaging is not initialized!');
-      document.getElementById('status').textContent = 'Firebase غير مفعل – جرب إعادة تحميل الصفحة.';
-      return;
-    }
-    const permission = await Notification.requestPermission();
-    if (permission === 'granted') {
-      console.log('Permission granted');
-      const token = await messaging.getToken({ vapidKey: 'BOcsE4nI5fIDQW8hFa-43M1IGZUAl13oDNaI5MkTR8BCvy9CVoExINdp9xLg_PLaWWyL-dsJHPmAlccuS2Xt7vs' });
-      console.log('Token generated:', token);
-      if (token) {
-        await messaging.subscribeToTopic(token, 'jadwal-updates');
-        console.log('Subscribed to topic successfully');
-        document.getElementById('status').textContent = 'تم التسجيل!';
-      } else {
-        console.error('Failed to generate token');
-      }
+    // يعرض نافذة الإذن للمستخدم
+    await OneSignal.Slidedown.promptPush();
+
+    // تحقق هل المستخدم وافق
+    const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
+
+    if (isSubscribed) {
+      console.log("✅ تم الاشتراك في الإشعارات!");
+      document.getElementById('status').textContent = "تم تفعيل الإشعارات بنجاح 🎉";
     } else {
-      console.error('Permission denied');
+      console.warn("🚫 المستخدم رفض الإشعارات");
+      document.getElementById('status').textContent = "لم يتم تفعيل الإشعارات.";
     }
   } catch (error) {
-    console.error('Error in requestPermission:', error);
-    document.getElementById('status').textContent = 'خطأ في التسجيل: ' + error.message;
+    console.error("⚠️ خطأ أثناء تفعيل الإشعارات:", error);
+    document.getElementById('status').textContent = "حدث خطأ أثناء التفعيل.";
   }
 }
 
 /* دالة إرسال إشعار (محدثة للإرسال عبر FCM REST API مع Server Key) */
-async function sendNotification() {
-  try {
-    const response = await fetch('https://us-central1-jadwal-app-khaled.cloudfunctions.net/sendLectureNotification', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        title: '📚 تم تحديث الجدول!',
-        body: 'قام الأدمن بإضافة أو تعديل محاضرة جديدة.'
-      })
-    });
-
-    if (response.ok) {
-      console.log('✅ تم إرسال الإشعار بنجاح عبر Cloud Function');
-    } else {
-      console.error('❌ خطأ في إرسال الإشعار:', await response.text());
-    }
-  } catch (error) {
-    console.error('❌ خطأ في الطلب:', error);
-  }
+function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
+  OneSignal.push(function() {
+    OneSignal.sendSelfNotification(
+      title,
+      body,
+      'https://yourwebsite.com', // https://khaledelrewni1.github.io/khaledelreweni1.github.io/
+      'https://yourwebsite.com/icons/favicon.png', // صورة الإشعار
+      {
+        notificationType: 'jadwal-update'
+      }
+    );
+  });
 }
 /* Render weekly table (مصححة مع إصلاح title element) */
 function renderTable(){
