@@ -217,11 +217,11 @@ try {
 // تسجيل service worker للإشعارات (مع try-catch للأمان)
 if ('serviceWorker' in navigator && messaging) {
   navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    .then((registration) => { 
-      console.log('SW registered for notifications:', registration); 
+    .then((registration) => {
+      console.log('Service Worker registered successfully:', registration);
     })
-    .catch((error) => { 
-      console.error('SW registration failed:', error); 
+    .catch((error) => {
+      console.error('Service Worker registration failed:', error);
     });
 }
 
@@ -574,30 +574,28 @@ function genColor(title){
 async function requestPermission() {
   try {
     if (!messaging) {
-      document.getElementById('status').textContent = 'Firebase غير مفعّل – لا يمكن الإشعارات.';
-      document.getElementById('status').style.color = 'red';
+      console.error('Messaging is not initialized!');
+      document.getElementById('status').textContent = 'Firebase غير مفعل – جرب إعادة تحميل الصفحة.';
       return;
     }
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      const token = await messaging.getToken({ vapidKey: 'BOcsE4nI5fIDQW8hFa-43M1IGZUAl13oDNaI5MkTR8BCvy9CVoExINdp9xLg_PLaWWyL-dsJHPmAlccuS2Xt7vs' });  // VAPID key من Firebase
+      console.log('Permission granted');
+      const token = await messaging.getToken({ vapidKey: 'BOcsE4nI5fIDQW8hFa-43M1IGZUAl13oDNaI5MkTR8BCvy9CVoExINdp9xLg_PLaWWyL-dsJHPmAlccuS2Xt7vs' });
+      console.log('Token generated:', token);
       if (token) {
-        // اشتراك في topic
         await messaging.subscribeToTopic(token, 'jadwal-updates');
-        console.log('Token generated and subscribed:', token);
-        document.getElementById('status').textContent = 'تم التسجيل! ستتلقى إشعارات التحديثات.';
-        document.getElementById('status').style.color = 'green';
+        console.log('Subscribed to topic successfully');
+        document.getElementById('status').textContent = 'تم التسجيل!';
       } else {
-        throw new Error('فشل في توليد الـ token');
+        console.error('Failed to generate token');
       }
     } else {
-      document.getElementById('status').textContent = 'الإشعارات محظورة – فعلها من إعدادات المتصفح.';
-      document.getElementById('status').style.color = 'orange';
+      console.error('Permission denied');
     }
   } catch (error) {
-    console.error('خطأ في الاشتراك:', error);
-    document.getElementById('status').textContent = 'خطأ في التسجيل – جرب مرة أخرى.';
-    document.getElementById('status').style.color = 'red';
+    console.error('Error in requestPermission:', error);
+    document.getElementById('status').textContent = 'خطأ في التسجيل: ' + error.message;
   }
 }
 
