@@ -1509,16 +1509,21 @@ function renderAll(){
 }
 
 // Initialization
-document.addEventListener('DOMContentLoaded', ()=>{ 
-  loadDataFromLocal(); // حمّل البيانات المحلية أولاً
-  initHandlers(); 
-  initTabs(); 
-  renderAll(); 
-  // حدث الإشعار كل دقيقة للكشف عن المحاضرات الحالية
-  if (typeof noticeInterval === 'undefined') {
-    noticeInterval = setInterval(() => {
-      renderLiveNotice();  // تحديث الإشعار العام فقط
-    }, 60000);  // كل دقيقة
+document.addEventListener('DOMContentLoaded', async () => {
+  loadDataFromLocal();
+  initHandlers();
+  initTabs();
+  renderAll();
+  
+  // تحقق من OneSignal بعد التحميل الكامل
+  if (window.OneSignal) {
+    console.log('OneSignal محمل بشكل صحيح!');
+    if (Notification.permission === 'granted') {
+      await requestPermission();  // تحديث تلقائي
+    }
+  } else {
+    console.error('OneSignal غير محمل!');
+    alert('⚠️ OneSignal لم يتم تحميله بشكل صحيح. تأكد من الاتصال بالإنترنت.');
   }
   // للعداد الدقيق (ثواني) في upcoming lectures، حدث كل ثانية
   if (typeof countdownInterval === 'undefined') {
