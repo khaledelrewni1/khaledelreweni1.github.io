@@ -195,10 +195,13 @@ try {
     appId: "1:599880482581:web:21d65c1aacfa68b83d331c",
   measurementId: "G-LM8SPG04XK"
   };
+  try {
   firebase.initializeApp(firebaseConfig);
   messaging = firebase.messaging();
-  console.log('Firebase initialized successfully');
-
+  console.log('Firebase initialized successfully:', messaging);
+} catch (error) {
+  console.error('Firebase initialization failed:', error);
+}
   // Foreground messages (إشعارات داخل الصفحة عندما تكون مفتوحة)
   messaging.onMessage((payload) => {
     console.log('Foreground message: ', payload);
