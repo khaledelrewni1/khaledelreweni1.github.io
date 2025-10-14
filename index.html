@@ -149,19 +149,18 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
         <div class="notice-small">يتم تحديث الجدول يومياً</div>
       </div>
     </div>
-    <div class="controls">
-      <div id="liveNotice" class="info-badge">حساب...</div>
-      <!-- الزر الجديد: مطابق للتصميم (داخل controls مع gap) -->
-<button id="subscribeBtn" onclick="OneSignal.showSlidedownPrompt()">فعل الإشعارات 🔔</button>
-      <span id="status"></span> <!-- status هنا للعرض -->
-      <div style="display:flex;gap:8px;align-items:center">
-        <button id="exportBtn" class="small-btn" title="تصدير JSON">تصدير</button>
-        <button id="importBtn" class="small-btn" title="استيراد JSON">استيراد</button>
-        <button id="printBtn" class="small-btn" title="تحميل PDF">تحميل PDF</button>
-        <button id="adminBtn" class="btn" title="لوحة الإدارة">لوحة الإدارة</button>
-        <button id="themeToggle" class="small-btn" title="تبديل الوضع">الوضع</button>
-      </div>
-    </div>
+   <div class="controls">
+  <div id="liveNotice" class="info-badge">حساب...</div>
+  <button id="subscribeBtn" onclick="requestPermission()">فعل الإشعارات 🔔</button>
+  <span id="status"></span>
+  <div style="display:flex;gap:8px;align-items:center">
+    <button id="exportBtn" class="small-btn" title="تصدير JSON">تصدير</button>
+    <button id="importBtn" class="small-btn" title="استيراد JSON">استيراد</button>
+    <button id="printBtn" class="small-btn" title="تحميل PDF">تحميل PDF</button>
+    <button id="adminBtn" class="btn" title="لوحة الإدارة">لوحة الإدارة</button>
+    <button id="themeToggle" class="small-btn" title="تبديل الوضع">الوضع</button>
+  </div>
+</div>
   </div>
 
   <nav class="nav">
@@ -1530,8 +1529,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }
   // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
   if (messaging && Notification.permission === 'granted') {
-    requestPermission();  // تحديث الـ token تلقائيًا
-  }
+  requestPermission();  // تحديث الـ token تلقائيًا
+}
 });
 
 // تنظيف الـ intervals عند إغلاق الصفحة (اختياري للأداء)
