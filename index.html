@@ -4,32 +4,12 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>📘 جدول المحاضرات</title>
-  <!-- ✅ OneSignal Web Push SDK -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
- 
+  <!-- ✅ Webpushr Web Push SDK (بديل OneSignal) -->
+<script src="https://cdn.webpushr.com/app.min.js" defer></script>
 <script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "04cefa8b-0ddf-48b6-bb39-b6e53b1d31b5", // ✅ ده App ID بتاعك من OneSignal
-      allowLocalhostAsSecureOrigin: true, // علشان تجرب على اللاب أو localhost
-      notifyButton: {
-        enable: true,
-        size: 'medium',
-        theme: 'default',
-        text: {
-          'tip.state.unsubscribed': 'تفعيل الإشعارات',
-          'tip.state.subscribed': 'الإشعارات مفعلة ✅',
-          'message.prenotify': 'اضغط لتفعيل إشعارات الجدول',
-        },
-        position: 'bottom-right'
-      },
-      welcomeNotification: {
-        title: "📘 جدول المحاضرات",
-        message: "تم تفعيل الإشعارات بنجاح 🎉",
-      },
-    });
-  });
+  // تهيئة Webpushr (ضع Site ID هنا من لوحة Webpushr)
+  var webpushr = webpushr || [];
+  webpushr.push(['init', 'YOUR_SITE_ID']);  // غير هذا بـ Site ID الحقيقي (مثل 12345)
 </script>
 <link rel="icon" href="icons/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
@@ -550,41 +530,49 @@ function genColor(title){
   return colorCache[title]; 
 }
 
-/* دالة الاشتراك في الإشعارات (محسنة مع error handling وتحديث token) */
-// ✅ دالة الاشتراك في الإشعارات باستخدام OneSignal
+/* دالة الاشتراك في الإشعارات (محسنة مع Webpushr) */
 async function requestPermission() {
-  console.log('جاري محاولة تفعيل OneSignal...');
-  if (!window.OneSignal) {
-    console.error("OneSignal غير موجود!");
-    alert("❌ OneSignal لم يتم تحميله بشكل صحيح!");
-    return;
-  }
+  console.log('جاري محاولة تفعيل Webpushr...');
   try {
-    await OneSignal.Slidedown.promptPush();
-    const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
-    if (isSubscribed) {
-      document.getElementById('status').textContent = "✅ تم تفعيل الإشعارات بنجاح!";
-    } else {
-      document.getElementById('status').textContent = "🚫 تم رفض الإشعارات.";
-    }
+    // Webpushr يتعامل مع الإذن تلقائيًا
+    webpushr.push(['subscribe']);
+    console.log("✅ تم الاشتراك في الإشعارات!");
+    document.getElementById('status').textContent = "تم تفعيل الإشعارات بنجاح 🎉";
   } catch (error) {
-    console.error("خطأ أثناء التفعيل:", error);
-    document.getElementById('status').textContent = "⚠️ حدث خطأ أثناء التفعيل.";
+    console.error("⚠️ خطأ أثناء التفعيل:", error);
+    document.getElementById('status').textContent = "حدث خطأ أثناء التفعيل.";
   }
 }
-/* دالة إرسال إشعار (محدثة للإرسال عبر FCM REST API مع Server Key) */
-function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
-  OneSignal.push(function() {
-    OneSignal.sendSelfNotification(
-      title,
-      body,
-      'https://yourwebsite.com', // https://khaledelrewni1.github.io/khaledelreweni1.github.io/
-      'https://yourwebsite.com/icons/favicon.png', // صورة الإشعار
-      {
-        notificationType: 'jadwal-update'
-      }
-    );
-  });
+
+/* دالة إرسال إشعار (محدثة للإرسال عبر Webpushr REST API) */
+async function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
+  const apiKey = 'YOUR_REST_API_KEY';  // ضع REST API Key هنا من Webpushr
+  const siteId = 'YOUR_SITE_ID';  // نفس Site ID اللي في التهيئة
+  
+  try {
+    const response = await fetch('https://api.webpushr.com/v1/notification/send/all', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'webpushrKey': apiKey,
+        'webpushrAuthToken': siteId
+      },
+      body: JSON.stringify({
+        title: title,
+        message: body,
+        target_url: window.location.href,  // رابط الموقع
+        icon: 'https://yourwebsite.com/icons/favicon.png'  // ضع رابط الأيقونة
+      })
+    });
+    
+    if (response.ok) {
+      console.log('✅ تم إرسال الإشعار بنجاح!');
+    } else {
+      console.error('⚠️ خطأ في إرسال الإشعار:', await response.json());
+    }
+  } catch (error) {
+    console.error('خطأ في الإرسال:', error);
+  }
 }
 /* Render weekly table (مصححة مع إصلاح title element) */
 function renderTable(){
@@ -1507,15 +1495,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   renderAll();
   
-  // تحقق من OneSignal بعد التحميل الكامل
-  if (window.OneSignal) {
-    console.log('OneSignal محمل بشكل صحيح!');
+    // تحقق من Webpushr بعد التحميل الكامل
+  if (typeof webpushr !== 'undefined') {
+    console.log('Webpushr محمل بشكل صحيح!');
     if (Notification.permission === 'granted') {
-      await requestPermission();  // تحديث تلقائي
+      requestPermission();  // تحديث تلقائي
     }
   } else {
-    console.error('OneSignal غير محمل!');
-    alert('⚠️ OneSignal لم يتم تحميله بشكل صحيح. تأكد من الاتصال بالإنترنت.');
+    console.error('Webpushr غير محمل!');
+    alert('⚠️ Webpushr لم يتم تحميله بشكل صحيح. تأكد من الاتصال بالإنترنت.');
+  }
+  // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
+  if (Notification.permission === 'granted') {
+    requestPermission();  // تحديث الاشتراك تلقائيًا
   }
   // للعداد الدقيق (ثواني) في upcoming lectures، حدث كل ثانية
   if (typeof countdownInterval === 'undefined') {
@@ -1539,27 +1531,16 @@ window.addEventListener('beforeunload', () => {
 });
 </script>
   <script>
-  // تأكد إن OneSignal تم تحميله
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    console.log("✅ OneSignal جاهز");
+  // تأكد إن Webpushr تم تحميله
+  webpushr.push(['ready', function() {
+    console.log("✅ Webpushr جاهز");
 
     // عند الضغط على الزر، يظهر نافذة تفعيل الإشعارات
-    document.getElementById("subscribeBtn").addEventListener("click", async () => {
-      try {
-        await OneSignal.Slidedown.promptPush();
-        const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
-        if (isSubscribed) {
-          document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
-        } else {
-          document.getElementById("status").textContent = "🚫 تم رفض الإشعارات.";
-        }
-      } catch (err) {
-        console.error("خطأ أثناء التفعيل:", err);
-        document.getElementById("status").textContent = "⚠️ حدث خطأ أثناء التفعيل.";
-      }
+    document.getElementById("subscribeBtn").addEventListener("click", () => {
+      webpushr.push(['subscribe']);
+      document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
     });
-  });
+  }]);
 </script>
    <script>
   if ('serviceWorker' in navigator) {
@@ -1572,5 +1553,6 @@ window.addEventListener('beforeunload', () => {
       });
   }
 </script>
+  <!-- start webpushr code --> <script>(function(w,d, s, id) {if(typeof(w.webpushr)!=='undefined') return;w.webpushr=w.webpushr||function(){(w.webpushr.q=w.webpushr.q||[]).push(arguments)};var js, fjs = d.getElementsByTagName(s)[0];js = d.createElement(s); js.id = id;js.async=1;js.src = "https://cdn.webpushr.com/app.min.js";fjs.parentNode.appendChild(js);}(window,document, 'script', 'webpushr-jssdk'));webpushr('setup',{'key':'BNtU2QB-waQ02FamPM-029FUMI_djfheBK4MfJrDczLSTbl67G7RlHALYgT5TbZ7Wlx5uaWKyRYBu-vpp66xvcg' });</script><!-- end webpushr code -->
 </body>
 </html>
