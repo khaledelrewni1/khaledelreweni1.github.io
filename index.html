@@ -546,8 +546,8 @@ async function requestPermission() {
 
 /* دالة إرسال إشعار (محدثة للإرسال عبر Webpushr REST API) */
 async function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
-  const apiKey = 'YOUR_REST_API_KEY';  // ضع REST API Key هنا من Webpushr
-  const siteId = 'YOUR_SITE_ID';  // نفس Site ID اللي في التهيئة
+  const apiKey = '65b09e7c6efcb6fa812f401c3d717db8';  // ضع REST API Key هنا من Webpushr
+  const siteId = '115063';  // نفس Site ID اللي في التهيئة
   
   try {
     const response = await fetch('https://api.webpushr.com/v1/notification/send/all', {
