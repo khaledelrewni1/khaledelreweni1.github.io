@@ -9,7 +9,7 @@
 <script>
   // تهيئة Webpushr (ضع Site ID هنا من لوحة Webpushr)
   var webpushr = webpushr || [];
-  webpushr.push(['init', 'YOUR_SITE_ID']);  // غير هذا بـ Site ID الحقيقي (مثل 12345)
+  webpushr.push(['init', '115063']);  // غير هذا بـ Site ID الحقيقي (مثل 12345)
 </script>
 <link rel="icon" href="icons/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
@@ -550,7 +550,7 @@ function requestPermission() {
 
 /* دالة إرسال إشعار (محدثة للإرسال عبر Webpushr REST API) */
 async function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
-  const apiKey = 'BNtU2QB-waQ02FamPM-029FUMI_djfheBK4MfJrDczLSTbl67G7RlHALYgT5TbZ7Wlx5uaWKyRYBu-vpp66xvcg';  // ضع REST API Key هنا من Webpushr
+  const apiKey = '65b09e7c6efcb6fa812f401c3d717db8';  // ضع REST API Key هنا من Webpushr
   const siteId = '115063';  // نفس Site ID اللي في التهيئة
   
   try {
