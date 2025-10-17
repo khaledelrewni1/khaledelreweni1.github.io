@@ -531,16 +531,20 @@ function genColor(title){
 }
 
 /* دالة الاشتراك في الإشعارات (محسنة مع Webpushr) */
-async function requestPermission() {
+function requestPermission() {
   console.log('جاري محاولة تفعيل Webpushr...');
-  try {
-    // Webpushr يتعامل مع الإذن تلقائيًا
-    webpushr.push(['subscribe']);
-    console.log("✅ تم الاشتراك في الإشعارات!");
-    document.getElementById('status').textContent = "تم تفعيل الإشعارات بنجاح 🎉";
-  } catch (error) {
-    console.error("⚠️ خطأ أثناء التفعيل:", error);
-    document.getElementById('status').textContent = "حدث خطأ أثناء التفعيل.";
+  if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
+    try {
+      webpushr.push(['subscribe']);
+      console.log("✅ تم الاشتراك في الإشعارات!");
+      document.getElementById('status').textContent = "تم تفعيل الإشعارات بنجاح 🎉";
+    } catch (error) {
+      console.error("⚠️ خطأ أثناء التفعيل:", error);
+      document.getElementById('status').textContent = "حدث خطأ أثناء التفعيل.";
+    }
+  } else {
+    console.error("Webpushr مش جاهز بعد!");
+    document.getElementById('status').textContent = "Webpushr مش جاهز، جرب تاني.";
   }
 }
 
@@ -1495,20 +1499,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTabs();
   renderAll();
   
-    // تحقق من Webpushr بعد التحميل الكامل
-  if (typeof webpushr !== 'undefined') {
-    console.log('Webpushr محمل بشكل صحيح!');
-    if (Notification.permission === 'granted') {
-      requestPermission();  // تحديث تلقائي
+     // تحقق من Webpushr بعد التحميل الكامل مع تأخير
+  setTimeout(() => {
+    if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
+      console.log('Webpushr محمل بشكل صحيح!');
+      if (Notification.permission === 'granted') {
+        requestPermission();  // تحديث تلقائي
+      }
+    } else {
+      console.error('Webpushr غير محمل!');
+      alert('⚠️ Webpushr لم يتم تحميله بشكل صحيح. تأكد من الاتصال بالإنترنت.');
     }
-  } else {
-    console.error('Webpushr غير محمل!');
-    alert('⚠️ Webpushr لم يتم تحميله بشكل صحيح. تأكد من الاتصال بالإنترنت.');
-  }
-  // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
-  if (Notification.permission === 'granted') {
-    requestPermission();  // تحديث الاشتراك تلقائيًا
-  }
+    // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
+    if (Notification.permission === 'granted') {
+      requestPermission();  // تحديث الاشتراك تلقائيًا
+    }
+  }, 2000);  // تأخير 2 ثانية عشان webpushr يتحمل
   // للعداد الدقيق (ثواني) في upcoming lectures، حدث كل ثانية
   if (typeof countdownInterval === 'undefined') {
     countdownInterval = setInterval(() => {
@@ -1531,27 +1537,22 @@ window.addEventListener('beforeunload', () => {
 });
 </script>
   <script>
-  // تأكد إن Webpushr تم تحميله
-  webpushr.push(['ready', function() {
-    console.log("✅ Webpushr جاهز");
+  // تأكد إن Webpushr تم تحميله مع فحص
+  setTimeout(() => {
+    if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
+      webpushr.push(['ready', function() {
+        console.log("✅ Webpushr جاهز");
 
-    // عند الضغط على الزر، يظهر نافذة تفعيل الإشعارات
-    document.getElementById("subscribeBtn").addEventListener("click", () => {
-      webpushr.push(['subscribe']);
-      document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
-    });
-  }]);
-</script>
-   <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/OneSignalSDKWorker.js')
-      .then(function(registration) {
-        console.log('Service Worker registered successfully:', registration);
-      })
-      .catch(function(error) {
-        console.error('Service Worker registration failed:', error);
-      });
-  }
+        // عند الضغط على الزر، يظهر نافذة تفعيل الإشعارات
+        document.getElementById("subscribeBtn").addEventListener("click", () => {
+          webpushr.push(['subscribe']);
+          document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
+        });
+      }]);
+    } else {
+      console.error("Webpushr مش جاهز!");
+    }
+  }, 2000);  // تأخير 2 ثانية
 </script>
   <!-- start webpushr code --> <script>(function(w,d, s, id) {if(typeof(w.webpushr)!=='undefined') return;w.webpushr=w.webpushr||function(){(w.webpushr.q=w.webpushr.q||[]).push(arguments)};var js, fjs = d.getElementsByTagName(s)[0];js = d.createElement(s); js.id = id;js.async=1;js.src = "https://cdn.webpushr.com/app.min.js";fjs.parentNode.appendChild(js);}(window,document, 'script', 'webpushr-jssdk'));webpushr('setup',{'key':'BNtU2QB-waQ02FamPM-029FUMI_djfheBK4MfJrDczLSTbl67G7RlHALYgT5TbZ7Wlx5uaWKyRYBu-vpp66xvcg' });</script><!-- end webpushr code -->
 </body>
