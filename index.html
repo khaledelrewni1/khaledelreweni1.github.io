@@ -6,17 +6,7 @@
 <title>📘 جدول المحاضرات</title>
   <!-- ✅ OneSignal Web Push SDK -->
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-  <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/OneSignalSDKWorker.js')
-      .then(function(registration) {
-        console.log('Service Worker registered successfully:', registration);
-      })
-      .catch(function(error) {
-        console.error('Service Worker registration failed:', error);
-      });
-  }
-</script>
+ 
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
@@ -564,33 +554,24 @@ function genColor(title){
 // ✅ دالة الاشتراك في الإشعارات باستخدام OneSignal
 async function requestPermission() {
   console.log('جاري محاولة تفعيل OneSignal...');
-  const OneSignal = window.OneSignal;
-  if (!OneSignal) {
+  if (!window.OneSignal) {
     console.error("OneSignal غير موجود!");
     alert("❌ OneSignal لم يتم تحميله بشكل صحيح!");
     return;
   }
-
   try {
-    // يعرض نافذة الإذن للمستخدم
     await OneSignal.Slidedown.promptPush();
-
-    // تحقق هل المستخدم وافق
     const isSubscribed = await OneSignal.User.PushSubscription.optedIn;
-
     if (isSubscribed) {
-      console.log("✅ تم الاشتراك في الإشعارات!");
-      document.getElementById('status').textContent = "تم تفعيل الإشعارات بنجاح 🎉";
+      document.getElementById('status').textContent = "✅ تم تفعيل الإشعارات بنجاح!";
     } else {
-      console.warn("🚫 المستخدم رفض الإشعارات");
-      document.getElementById('status').textContent = "لم يتم تفعيل الإشعارات.";
+      document.getElementById('status').textContent = "🚫 تم رفض الإشعارات.";
     }
   } catch (error) {
-    console.error("⚠️ خطأ أثناء تفعيل الإشعارات:", error);
-    document.getElementById('status').textContent = "حدث خطأ أثناء التفعيل.";
+    console.error("خطأ أثناء التفعيل:", error);
+    document.getElementById('status').textContent = "⚠️ حدث خطأ أثناء التفعيل.";
   }
 }
-
 /* دالة إرسال إشعار (محدثة للإرسال عبر FCM REST API مع Server Key) */
 function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
   OneSignal.push(function() {
@@ -1579,6 +1560,17 @@ window.addEventListener('beforeunload', () => {
       }
     });
   });
+</script>
+   <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/OneSignalSDKWorker.js')
+      .then(function(registration) {
+        console.log('Service Worker registered successfully:', registration);
+      })
+      .catch(function(error) {
+        console.error('Service Worker registration failed:', error);
+      });
+  }
 </script>
 </body>
 </html>
