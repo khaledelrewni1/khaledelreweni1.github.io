@@ -4,25 +4,24 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>📘 جدول المحاضرات</title>
-  <!-- Webpushr SDK (إعداد واحد فقط) -->
+  <!-- ✅ Webpushr Web Push SDK (بديل OneSignal) -->
 <script src="https://cdn.webpushr.com/app.min.js" defer></script>
 <script>
-  // إعداد Webpushr (استخدم Site ID الخاص بك هنا)
+  // تهيئة Webpushr (ضع Site ID هنا من لوحة Webpushr)
   var webpushr = webpushr || [];
-  webpushr.push(['init', '115063']);  // غير هذا إلى Site ID الحقيقي من Webpushr
+  webpushr.push(['init', '115063']);  // غير هذا بـ Site ID الحقيقي (مثل 12345)
 </script>
   
 <link rel="icon" href="icons/favicon.png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet">
 <style>
-/* نفس الـ CSS الأصلي، لم أغيره */
 :root{
   --accent1:#60a5fa; --accent2:#7c3aed;
   --bg-grad: linear-gradient(90deg,var(--accent1),var(--accent2));
   --card:#ffffff; --text:#071127; --muted:#475569;
   --cell-border: rgba(2,6,23,0.06);
   --th-bg: rgba(0,0,0,0.03);
-  transition: all 0.3s ease;
+  transition: all 0.3s ease; /* انتقال سلس للثيم */
 }
 [data-theme="dark"]{
   --card:#071127; --text:#e6eef8; --muted:#9ca3af; --cell-border: rgba(255,255,255,0.06);
@@ -37,8 +36,8 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 .logo{width:52px;height:52px;border-radius:10px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:28px}
 .title{font-size:20px;font-weight:800}
 .controls{display:flex;gap:8px;align-items:center}
-.btn{background:white;color:#3730a3;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700;transition: all 0.3s ease;}
-.btn:hover{background:var(--accent1);color:white;}
+.btn{background:white;color:#3730a3;padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700;transition: all 0.3s ease;} /* إضافة transition للزر */
+.btn:hover{background:var(--accent1);color:white;} /* hover مع accent1 */
 .small-btn{background:transparent;border:1px solid rgba(255,255,255,0.18);color:white;padding:6px 10px;border-radius:8px;cursor:pointer;transition: all 0.3s ease;}
 .small-btn:hover{background:rgba(255,255,255,0.12);}
 .info-badge{background:rgba(255,255,255,0.16);padding:6px 10px;border-radius:8px;font-size:13px}
@@ -75,7 +74,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 .notice-small{font-size:13px;color:rgba(255,255,255,0.9);opacity:0.95;margin-top:6px}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
-/* إضافات للعداد */
+/* إضافات للعداد المتقدم في الهيدر */
 .live-countdown {
   animation: pulse 2s infinite;
 }
@@ -89,7 +88,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
   animation: shake 0.5s;
 }
 
-/* زر الإشعارات */
+/* تنسيق الزر الجديد للإشعارات (مطابق للتصميم) */
 #subscribeBtn {
   background: white;
   color: #3730a3;
@@ -100,15 +99,15 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
   font-weight: 700;
   font-family: 'Cairo', sans-serif;
   transition: all 0.3s ease;
-  margin: 0 8px;
+  margin: 0 8px; /* gap مع الأزرار الأخرى */
 }
 #subscribeBtn:hover {
-  background: var(--accent1);
+  background: var(--accent1); /* أزرق فاتح من الـ accent */
   color: white;
-  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.3); /* ظل خفيف */
 }
 #status {
-  background: rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.16); /* مطابق لـ info-badge */
   padding: 6px 10px;
   border-radius: 8px;
   font-size: 13px;
@@ -118,7 +117,7 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
   display: inline-block;
 }
 [data-theme="dark"] #status {
-  background: rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.1); /* تكيف مع الدارك مود */
 }
 </style>
 </head>
@@ -189,38 +188,262 @@ body{margin:0;font-family:'Cairo',sans-serif;background:var(--bg-grad);color:var
 <script>
 /* Config */
 const ENCODED_PASSWORD = 'S2hhbGVkMjExMCU='; // 'Khaled2110%'
-const ADMIN_PASSWORD = atob(ENCODED_PASSWORD);
+const ADMIN_PASSWORD = atob(ENCODED_PASSWORD); // decode عند التشغيل
 const STORAGE_KEY_THEME = 'jadwal_theme';
-const STORAGE_KEY_DATA = 'jadwal_data';
+const STORAGE_KEY_DATA = 'jadwal_data'; // مفتاح لحفظ البيانات محليًا
 const DAYS = ['السبت','الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة'];
-const HOURS = Array.from({length:15},(_,i)=>8+i);
+const HOURS = Array.from({length:15},(_,i)=>8+i); // 8 ص إلى 10 م (15 ساعة)
 
-/* بيانات افتراضية */
+/* بيانات افتراضية ثابتة (hardcode) – عدلها هنا وارفع على GitHub عشان تظهر للكل */
 let DATA = {
   lectures: [
-    // نفس البيانات الأصلية، لم أغيرها
-    {"id": "idmgmpsika3qsxarr","day": "السبت","startHour": 10,"startMin": 0,"endHour": 14,"endMin": 0,"title": "أساسيات تمريض نظري","instructorId": "idmgmppo05hohhc2a","instructorName": null,"location": "","notes": "","link": ""},
-    {"id": "idmgmpsz94t0e99l6","day": "السبت","startHour": 19,"startMin": 0,"endHour": 20,"endMin": 0,"title": "علم الأدوية","instructorId": "idmgmppuxcbxi1den","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmptfeanvioois","day": "السبت","startHour": 20,"startMin": 0,"endHour": 22,"endMin": 0,"title": "قضايا مجتمعية","instructorId": "idmgmpq3h21xx212z","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmpug13730m16c","day": "الأحد","startHour": 9,"startMin": 0,"endHour": 11,"endMin": 0,"title": "تكنولوجيا المعلومات","instructorId": "idmgmpqa5qqyf0nzw","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmpv1ngk5va8mo","day": "الأحد","startHour": 11,"startMin": 0,"endHour": 13,"endMin": 0,"title": "مهارات التواصل","instructorId": "idmgmpqgwlzfuzmfp","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmpvuvji5i63d0","day": "الاثنين","startHour": 9,"startMin": 0,"endHour": 11,"endMin": 0,"title": "أخلاقيات المهنة","instructorId": "idmgmpqp7cjku2mud","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmpwc4otaxwt8k","day": "الثلاثاء","startHour": 9,"startMin": 0,"endHour": 11,"endMin": 0,"title": "التغذية","instructorId": "idmgmpr2vt4aplmm6","instructorName": null,"location": ".","notes": "","link": ""},          {"id": "idmgmq4y5wueq1ygn","day": "الأربعاء","startHour": 11,"startMin": 0,"endHour": 17,"endMin": 0,"title": "أساسيات التمريض (عملي)","instructorId": "idmgmprrsmw1qub9g","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmq5mhj66lo0na","day": "الخميس","startHour": 8,"startMin": 0,"endHour": 14,"endMin": 0,"title": "أساسيات التمريض (عملي)","instructorId": "idmgmprrsmw1qub9g","instructorName": null,"location": ".","notes": "","link": ""},
-    {"id": "idmgmq7f7285cuk9i","day": "الخميس","startHour": 18,"startMin": 0,"endHour": 19,"endMin": 0,"title": "لغة إنجليزية 2","instructorId": "idmgmq6jaotttg27g","instructorName": null,"location": ".","notes": "","link": ""}
-  ],
+  {
+    "id": "idmgmpsika3qsxarr",
+    "day": "السبت",
+    "startHour": 10,
+    "startMin": 0,
+    "endHour": 14,
+    "endMin": 0,
+    "title": "أساسيات تمريض نظري",
+    "instructorId": "idmgmppo05hohhc2a",
+    "instructorName": null,
+    "location": "",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpsz94t0e99l6",
+    "day": "السبت",
+    "startHour": 19,
+    "startMin": 0,
+    "endHour": 20,
+    "endMin": 0,
+    "title": "علم الأدوية",
+    "instructorId": "idmgmppuxcbxi1den",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmptfeanvioois",
+    "day": "السبت",
+    "startHour": 20,
+    "startMin": 0,
+    "endHour": 22,
+    "endMin": 0,
+    "title": "قضايا مجتعمية",
+    "instructorId": "idmgmpq3h21xx212z",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpug13730m16c",
+    "day": "الأحد",
+    "startHour": 9,
+    "startMin": 0,
+    "endHour": 11,
+    "endMin": 0,
+    "title": "تكنولوجيا المعلومات",
+    "instructorId": "idmgmpqa5qqyf0nzw",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpv1ngk5va8mo",
+    "day": "الأحد",
+    "startHour": 11,
+    "startMin": 0,
+    "endHour": 13,
+    "endMin": 0,
+    "title": "مهارات التواصل",
+    "instructorId": "idmgmpqgwlzfuzmfp",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpvuvji5i63d0",
+    "day": "الاثنين",
+    "startHour": 9,
+    "startMin": 0,
+    "endHour": 11,
+    "endMin": 0,
+    "title": "أخلاقيات المهنة",
+    "instructorId": "idmgmpqp7cjku2mud",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpwc4otaxwt8k",
+    "day": "الثلاثاء",
+    "startHour": 9,
+    "startMin": 0,
+    "endHour": 11,
+    "endMin": 0,
+    "title": "التغذية",
+    "instructorId": "idmgmpr2vt4aplmm6",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmpwxfmvhiz0pz",
+    "day": "الثلاثاء",
+    "startHour": 11,
+    "startMin": 0,
+    "endHour": 13,
+    "endMin": 0,
+    "title": "التثقيف الصحي",
+    "instructorId": "idmgmpreo1qm5kzsv",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq4y5wueq1ygn",
+    "day": "الأربعاء",
+    "startHour": 11,
+    "startMin": 0,
+    "endHour": 17,
+    "endMin": 0,
+    "title": "أساسيات التمريض (عملي)",
+    "instructorId": "idmgmprrsmw1qub9g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq5mhj66lo0na",
+    "day": "الخميس",
+    "startHour": 8,
+    "startMin": 0,
+    "endHour": 14,
+    "endMin": 0,
+    "title": "أساسيات التمريض (عملي)",
+    "instructorId": "idmgmprrsmw1qub9g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  },
+  {
+    "id": "idmgmq7f7285cuk9i",
+    "day": "الخميس",
+    "startHour": 18,
+    "startMin": 0,
+    "endHour": 19,
+    "endMin": 0,
+    "title": "لغة إنجليزية 2",
+    "instructorId": "idmgmq6jaotttg27g",
+    "instructorName": null,
+    "location": ".",
+    "notes": "",
+    "link": ""
+  }
+],
   instructors: [
-    {"id": "idmgmppo05hohhc2a","name": "د.دعاء أمين \\ د.أسماء شحاته","title": "","subjects": ["أساسيات تمريض نظري"],"bio": ""},
-    {"id": "idmgmppuxcbxi1den","name": "د.ياسمين عطية","title": "","subjects": ["علم الأدوية"],"bio": ""},
-    {"id": "idmgmpq3h21xx212z","name": "د.بسمة طاهر","title": "","subjects": ["قضايا مجتمعية"],"bio": ""},
-    {"id": "idmgmpqa5qqyf0nzw","name": "د.أسماء محى الدين \\ د.سعاد عرفة","title": "","subjects": ["تكنولوجيا المعلومات"],"bio": ""},
-    {"id": "idmgmpqgwlzfuzmfp","name": "د.مروة فؤاد \\ د.إيمان السقا","title": "","subjects": ["مهارات التواصل"],"bio": ""},
-    {"id": "idmgmpqp7cjku2mud","name": "د.أمل جمال","title": "","subjects": ["أخلاقيات المهنة"],"bio": ""},
-    {"id": "idmgmpr2vt4aplmm6","name": "د.جيهان الزلباني","title": "","subjects": ["التغذية"],"bio": ""},
-    {"id": "idmgmpreo1qm5kzsv","name": "د.سالي فايد \\ د.إيمان عنان","title": "","subjects": ["التثقيف الصحي"],"bio": ""},
-    {"id": "idmgmprrsmw1qub9g","name": "م \\ اسماء البنان – م\\ اسراء السعيد – م\\ مريم ربيع","title": "","subjects": ["أساسيات التمريض (عملي)"],"bio": ""},
-    {"id": "idmgmq6jaotttg27g","name": "د.ابتسام الشقروفي","title": "","subjects": ["لغة انجليزية"],"bio": ""}
-  ],
+  {
+    "id": "idmgmppo05hohhc2a",
+    "name": "د.دعاء أمين \\ د.أسماء شحاته",
+    "title": "",
+    "subjects": [
+      "أساسيات تمريض نظري"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmppuxcbxi1den",
+    "name": "د.ياسمين عطية",
+    "title": "",
+    "subjects": [
+      "علم الأدوية"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpq3h21xx212z",
+    "name": "د.بسمة طاهر",
+    "title": "",
+    "subjects": [
+      "قضايا مجتمعية"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpqa5qqyf0nzw",
+    "name": "د.أسماء محى الدين \\ د.سعاد عرفة",
+    "title": "",
+    "subjects": [
+      "تكنولوجيا المعلومات"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpqgwlzfuzmfp",
+    "name": "د.مروة فؤاد \\ د.إيمان السقا",
+    "title": "",
+    "subjects": [
+      "مهارات التواصل"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpqp7cjku2mud",
+    "name": "د.أمل جمال",
+    "title": "",
+    "subjects": [
+      "أخلاقيات المهنة"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpr2vt4aplmm6",
+    "name": "د.جيهان الزلباني",
+    "title": "",
+    "subjects": [
+      "التغذية"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmpreo1qm5kzsv",
+    "name": "د.سالي فايد \\ د.إيمان عنان",
+    "title": "",
+    "subjects": [
+      "التثقيف الصحي"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmprrsmw1qub9g",
+    "name": "م \\ اسماء البنان – م\\ اسراء السعيد – م\\ مريم ربيع",
+    "title": "",
+    "subjects": [
+      "أساسيات التمريض (عملي)"
+    ],
+    "bio": ""
+  },
+  {
+    "id": "idmgmq6jaotttg27g",
+    "name": "د.ابتسام الشقروفي",
+    "title": "",
+    "subjects": [
+      "لغة انجليزية"
+    ],
+    "bio": ""
+  }
+],
   changes: []
 };
 window.isAdmin = false;
@@ -229,7 +452,7 @@ window.isAdmin = false;
 function to12(h){ const period = h>=12 ? 'م' : 'ص'; let hh = h%12; if(hh===0) hh=12; return hh + ':00 ' + period; }
 function to12WithMin(h,m){ const hour = parseInt(h,10); const period = hour>=12 ? 'م' : 'ص'; let hh = hour%12; if(hh===0) hh=12; return hh + ':' + String(m).padStart(2,'0') + ' ' + period; }
 
-/* دالة جديدة لعرض الساعة في رأس الجدول */
+/* دالة جديدة لعرض الساعة في رأس الجدول (12 ساعة بدون :00) */
 function displayHour(h) {
   const period = h >= 12 ? 'م' : 'ص';
   let hh = h % 12;
@@ -237,7 +460,7 @@ function displayHour(h) {
   return hh + ' ' + period;
 }
 
-/* دالة للحصول على التاريخ والوقت الحالي بتوقيت القاهرة */
+/* دالة للحصول على التاريخ والوقت الحالي بتوقيت القاهرة (مصر، UTC+2) */
 function getCairoTime() {
   const now = new Date();
   const cairoTime = new Intl.DateTimeFormat('en-US', {
@@ -251,7 +474,7 @@ function getCairoTime() {
     hour12: false
   }).formatToParts(now);
   const year = parseInt(cairoTime.find(p => p.type === 'year').value);
-  const month = parseInt(cairoTime.find(p => p.type === 'month').value) - 1;
+  const month = parseInt(cairoTime.find(p => p.type === 'month').value) - 1; // JS months 0-based
   const day = parseInt(cairoTime.find(p => p.type === 'day').value);
   const hour = parseInt(cairoTime.find(p => p.type === 'hour').value);
   const minute = parseInt(cairoTime.find(p => p.type === 'minute').value);
@@ -259,14 +482,14 @@ function getCairoTime() {
   return new Date(year, month, day, hour, minute, second);
 }
 
-/* دالة للحصول على رقم اليوم في الأسبوع بتوقيت القاهرة */
+/* دالة للحصول على رقم اليوم في الأسبوع بتوقيت القاهرة (السبت = 0) */
 function getCairoDayIndex() {
   const cairoNow = getCairoTime();
-  let jsDay = cairoNow.getDay();
-  return (jsDay + 1) % 7;
+  let jsDay = cairoNow.getDay(); // JS: Sunday=0, Saturday=6
+  return (jsDay + 1) % 7; // تحويل: Saturday=0, Sunday=1, ..., Friday=6
 }
 
-/* Data helpers */
+/* Data helpers (حفظ/تحميل من localStorage للثبات المحلي) */
 function uid(){ return 'id' + Date.now().toString(36) + Math.random().toString(36).slice(2,9); }
 function saveTheme(theme){ localStorage.setItem(STORAGE_KEY_THEME, theme); }
 function loadTheme(){ return localStorage.getItem(STORAGE_KEY_THEME) || 'light'; }
@@ -274,7 +497,7 @@ function saveDataToLocal() {
   try {
     localStorage.setItem(STORAGE_KEY_DATA, JSON.stringify(DATA));
   } catch (e) {
-    console.error('خطأ في حفظ البيانات:', e);
+    console.error('خطأ في حفظ البيانات في localStorage:', e);
   }
 }
 function loadDataFromLocal() {
@@ -308,7 +531,7 @@ function genColor(title){
   return colorCache[title]; 
 }
 
-/* دالة الاشتراك في الإشعارات (محسنة) */
+/* دالة الاشتراك في الإشعارات (محسنة مع Webpushr) */
 function requestPermission() {
   console.log('جاري محاولة تفعيل Webpushr...');
   if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
@@ -326,10 +549,10 @@ function requestPermission() {
   }
 }
 
-/* دالة إرسال إشعار */
+/* دالة إرسال إشعار (محدثة للإرسال عبر Webpushr REST API) */
 async function sendNotification(title = "📘 تم تحديث الجدول!", body = "قام الأدمن بإضافة أو تعديل محاضرة جديدة.") {
-  const apiKey = '65b09e7c6efcb6fa812f401c3d717db8';
-  const siteId = '115063';
+  const apiKey = '65b09e7c6efcb6fa812f401c3d717db8';  // ضع REST API Key هنا من Webpushr
+  const siteId = '115063';  // نفس Site ID اللي في التهيئة
   
   try {
     const response = await fetch('https://api.webpushr.com/v1/notification/send/all', {
@@ -342,8 +565,8 @@ async function sendNotification(title = "📘 تم تحديث الجدول!", bo
       body: JSON.stringify({
         title: title,
         message: body,
-        target_url: window.location.href,
-        icon: 'https://yourwebsite.com/icons/favicon.png'
+        target_url: window.location.href,  // رابط الموقع
+        icon: 'https://yourwebsite.com/icons/favicon.png'  // ضع رابط الأيقونة
       })
     });
     
@@ -356,8 +579,7 @@ async function sendNotification(title = "📘 تم تحديث الجدول!", bo
     console.error('خطأ في الإرسال:', error);
   }
 }
-
-/* Render weekly table */
+/* Render weekly table (مصححة مع إصلاح title element) */
 function renderTable(){
   const container=document.getElementById('tableContainer'); 
   if(!container) return; 
@@ -366,7 +588,7 @@ function renderTable(){
   table.className='table';
   const thead=document.createElement('thead'); 
   const headRow=document.createElement('tr'); 
-  headRow.appendChild(document.createElement('th'));
+  headRow.appendChild(document.createElement('th'));  // عمود اليوم فقط
   HOURS.forEach((h,idx)=>{
     const th=document.createElement('th'); 
     const next = HOURS[idx+1] || (h+1); 
@@ -384,7 +606,7 @@ function renderTable(){
     dayCell.innerText=day; 
     tr.appendChild(dayCell);
     const occ = new Array(HOURS.length).fill(null);
-    (map[day]||[]).forEach(l=>{
+        (map[day]||[]).forEach(l=>{
       const startNum = l.startHour + ((l.startMin||0)/60);
       const endNum = l.endHour + ((l.endMin||0)/60);
       const startIdx = Math.max(0, Math.floor(startNum - HOURS[0]));
@@ -415,12 +637,16 @@ function renderTable(){
           div.style.borderRadius='8px'; 
           div.style.padding='6px'; 
           div.style.marginBottom='6px';
+
+          // إصلاح: إنشاء title بشكل صحيح
           const title = document.createElement('div');
           title.style.fontWeight = '800';
           title.style.color = col.solid;
           title.innerText = lec.title;
+
           const meta=document.createElement('div'); 
           meta.className='meta'; 
+          // معالجة الرابط: لو location رابط، اعرض "أونلاين"، وأضف رابط clickable تحت
           let locationText = lec.location || 'غير محدد';
           let isLink = false;
           if (lec.location && (lec.location.startsWith('http://') || lec.location.startsWith('https://'))) {
@@ -434,6 +660,7 @@ function renderTable(){
           div.appendChild(title); 
           div.appendChild(meta); 
           div.appendChild(timeEl);
+          // إضافة رابط clickable إذا كان رابط
           if (isLink) {
             const a=document.createElement('a'); 
             a.href=lec.location; 
@@ -446,6 +673,7 @@ function renderTable(){
             a.style.fontSize = '12px';
             div.appendChild(a); 
           }
+          // admin actions
           if(window.isAdmin){
             const actions=document.createElement('div'); 
             actions.style.marginTop='6px'; 
@@ -453,7 +681,7 @@ function renderTable(){
             actions.style.justifyContent='flex-end'; 
             actions.style.gap='6px';
             const delBtn=document.createElement('button'); 
-            delBtn.className='small-btn admin-only'; 
+            delBtn.className='small-btn admin-only';  // إضافة class للإخفاء
             delBtn.title='حذف'; 
             delBtn.innerText='🗑️';
             delBtn.onclick = (ev)=>{ 
@@ -461,14 +689,14 @@ function renderTable(){
               if(confirm('حذف المحاضرة؟')){ 
                 const lecTitle = lec.title;
                 DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
-                saveDataToLocal(); 
+                saveDataToLocal(); // حفظ محلي
                 renderAll(); 
                 recordChange('حُذفت المحاضرة: ' + lecTitle); 
-                sendNotification(); 
+                sendNotification();  // إرسال إشعار تلقائي عند الحذف
               } 
             };
             const editBtn=document.createElement('button'); 
-            editBtn.className='small-btn admin-only'; 
+            editBtn.className='small-btn admin-only';  // إضافة class للإخفاء
             editBtn.title='تعديل'; 
             editBtn.innerText='✏️';
             editBtn.onclick = (ev)=>{ 
@@ -496,7 +724,7 @@ function renderTable(){
   renderChangeLog();
 }
 
-/* Render day tabs and day view */
+/* Render day tabs and day view (مع إضافة admin-only classes) */
 function renderDaysTabs(){
   const daysTabs=document.getElementById('daysTabs'); 
   if(!daysTabs) return;
@@ -508,6 +736,7 @@ function renderDaysTabs(){
     btn.onclick=()=> showDay(d); 
     daysTabs.appendChild(btn); 
   });
+  // activate today by default (بتوقيت القاهرة)
   const todayIndex = getCairoDayIndex();
   const today = DAYS[todayIndex];
   showDay(today);
@@ -532,6 +761,7 @@ function showDay(day){
     title.innerText=lec.title;
     const meta=document.createElement('div'); 
     meta.className='kv'; 
+    // معالجة الرابط: لو location رابط، اعرض "أونلاين"، وأضف رابط clickable تحت
     let locationText = lec.location || 'غير محدد';
     let isLink = false;
     if (lec.location && (lec.location.startsWith('http://') || lec.location.startsWith('https://'))) {
@@ -541,7 +771,52 @@ function showDay(day){
     meta.innerText=(getInstructorName(lec.instructorId)||lec.instructorName||'') + ' • ' + locationText;
     const timeEl=document.createElement('div'); 
     timeEl.className='kv'; 
-    timeEl.innerText = to12WithMin(lec    container.appendChild(card);
+    timeEl.innerText = to12WithMin(lec.startHour,lec.startMin||0) + ' — ' + to12WithMin(lec.endHour,lec.endMin||0);
+    card.appendChild(title); 
+    card.appendChild(meta); 
+    card.appendChild(timeEl);
+    // إضافة رابط clickable إذا كان رابط
+    if (isLink) {
+      const a=document.createElement('a'); 
+      a.href=lec.location; 
+      a.target='_blank'; 
+      a.innerText='رابط المحاضرة'; 
+      a.style.display='block'; 
+      a.style.marginTop='6px'; 
+      a.style.color = 'var(--accent1)';
+      a.style.textDecoration = 'none';
+      card.appendChild(a); 
+    }
+    // admin actions
+    if(window.isAdmin){
+      const actions = document.createElement('div'); 
+      actions.style.marginTop='8px'; 
+      actions.style.display='flex'; 
+      actions.style.justifyContent='flex-end'; 
+      actions.style.gap='6px';
+      const delBtn = document.createElement('button'); 
+      delBtn.className='small-btn admin-only';  // إضافة class للإخفاء
+      delBtn.innerText='🗑️'; 
+      delBtn.onclick=()=>{ 
+        if(confirm('حذف المحاضرة؟')){ 
+          const lecTitle = lec.title;
+          DATA.lectures = DATA.lectures.filter(x=> x.id !== lec.id); 
+          saveDataToLocal(); // حفظ محلي
+          renderAll(); 
+          recordChange('حُذفت المحاضرة: '+lecTitle); 
+          sendNotification();  // إرسال إشعار تلقائي
+        } 
+      };
+      const editBtn = document.createElement('button'); 
+      editBtn.className='small-btn admin-only';  // إضافة class للإخفاء
+      editBtn.innerText='✏️'; 
+      editBtn.onclick=()=>{ openEditModal(lec); };
+      actions.appendChild(editBtn); 
+      actions.appendChild(delBtn); 
+      card.appendChild(actions);
+    }
+    if(isNowInLecture(lec)) card.classList.add('current');
+    container.appendChild(card);
   });
 }
 
@@ -578,7 +853,7 @@ function renderLegend(){
   }); 
 }
 
-/* Live check */
+/* Live check (بتوقيت القاهرة) */
 function isNowInLecture(lec){ 
   if(!lec) return false; 
   const cairoNow = getCairoTime();
@@ -592,7 +867,7 @@ function isNowInLecture(lec){
   return cairoNow>=start && cairoNow<end; 
 }
 
-/* timeRemaining */
+/* دالة timeRemaining (للعداد – محسنة لليوم/ساعة/دقيقة/ثانية) */
 function timeRemaining(targetDate){ 
   const cairoNow = getCairoTime();
   const diff = Math.max(0, targetDate - cairoNow); 
@@ -608,7 +883,7 @@ function timeRemaining(targetDate){
   return timeStr.trim();
 }
 
-/* renderLiveNotice */
+/* دالة عرض الإشعار العام في الهيدر (بتوقيت القاهرة) */
 function renderLiveNotice() {
   const noticeEl = document.getElementById('liveNotice');
   if (!noticeEl) return;
@@ -630,6 +905,7 @@ function renderLiveNotice() {
     noticeEl.classList.add('current');
     noticeEl.classList.remove('live-countdown', 'upcoming-soon');
   } else {
+    // أقرب محاضرة اليوم
     const nextLecture = todayLectures.find(l => {
       const lecDate = new Date(cairoNow);
       lecDate.setHours(l.startHour, l.startMin || 0, 0, 0);
@@ -641,7 +917,7 @@ function renderLiveNotice() {
       noticeEl.innerText = `${nextLecture.title}: بعد ${timeRemaining(lecDate)}`;
       noticeEl.classList.add('live-countdown');
       const diff = lecDate - cairoNow;
-      if (diff < 300000) {
+      if (diff < 300000) {  // أقل من 5 دقائق
         noticeEl.classList.add('upcoming-soon');
       } else {
         noticeEl.classList.remove('upcoming-soon');
@@ -653,7 +929,7 @@ function renderLiveNotice() {
   }
 }
 
-/* Admin UI */
+/* Admin UI (مع أمان محسن + إرسال إشعار عند الحفظ) */
 function openAdminFlow(){ 
   const root=document.getElementById('modalRoot'); 
   if(!root) return;
@@ -678,17 +954,18 @@ function openAdminFlow(){
       root.innerHTML=''; 
       openAdmin(); updateAdminVisibility(); 
       recordChange('الأدمن دخل لوحة التحكم'); 
-      console.log('Admin login successful'); 
+      console.log('Admin login successful'); // log للأمان
     } else { 
       const pwEl=document.getElementById('pw'); 
       pwEl.style.animation='shake 0.3s'; 
       setTimeout(()=> pwEl.style.animation='',350); 
       alert('كلمة المرور خاطئة! الوصول محظور.'); 
-      console.log('Failed admin login attempt'); 
+      console.log('Failed admin login attempt'); // log للأمان
     } 
   }; 
 }
 
+// Admin panel (مع إرسال إشعار عند الحفظ)
 function openAdmin(){ 
   const root=document.getElementById('modalRoot'); 
   if(!root) return;
@@ -697,7 +974,7 @@ function openAdmin(){
   wrap.className='modal-back'; 
   const m=document.createElement('div'); 
   m.className='modal'; 
-  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ (يرسل إشعار)</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات محفوظة محليًا في متصفحك. لجعلها تظهر للجميع، استخدم "تصدير كود GitHub" في تبويب الاستيراد/تصدير، ثم انسخ الكود ولصقه في ملف HTML على GitHub وارفع.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
+  m.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><h3>لوحة الإدارة</h3><div><button id="saveBtn" class="btn">حفظ (يرسل إشعار)</button> <button id="closeBtn" class="btn">خروج</button></div></div><p class="kv">التعديلات محف وظة محليًا في متصفحك. لجعلها تظهر للجميع، استخدم "تصدير كود GitHub" في تبويب الاستيراد/تصدير، ثم انسخ الكود ولصقه في ملف HTML على GitHub وارفع.</p><div style="margin-top:12px"><div style="display:flex;gap:8px;margin-bottom:8px"><button id="tabLect" class="btn active">المحاضرات</button><button id="tabInst" class="btn">الدكاترة</button><button id="tabImp" class="btn">استيراد/تصدير</button></div><div id="adminBody"></div></div>'; 
   wrap.appendChild(m); 
   root.appendChild(wrap); 
   root.style.display='block'; 
@@ -708,11 +985,12 @@ function openAdmin(){
     updateAdminVisibility(); 
   }; 
   document.getElementById('saveBtn').onclick=()=>{ 
-    saveDataToLocal(); 
-    sendNotification(); 
+    saveDataToLocal(); // حفظ محلي
+    sendNotification();  // إرسال إشعار تلقائي للطلبة
     alert('تم حفظ التعديلات محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.'); 
     renderAll(); 
   }; 
+  // تصحيح: استخدم functions منفصلة للـ onclick لتجنب التكرار والأخطاء
   function switchToLect() { 
     document.querySelectorAll('[id^="tab"]').forEach(b=>b.classList.remove('active')); 
     document.getElementById('tabLect').classList.add('active'); 
@@ -731,8 +1009,8 @@ function openAdmin(){
   document.getElementById('tabLect').onclick = switchToLect;
   document.getElementById('tabInst').onclick = switchToInst;
   document.getElementById('tabImp').onclick = switchToImp;
-  loadDataFromLocal(); 
-  renderAdminLectures(); 
+  loadDataFromLocal(); // حمّل البيانات المحلية عند الدخول
+  renderAdminLectures(); // افتراضي: المحاضرات
 }
 
 function renderAdminLectures(){ 
@@ -775,11 +1053,11 @@ function renderAdminLectures(){
       link: '' 
     }; 
     DATA.lectures.push(lec); 
-    saveDataToLocal(); 
+    saveDataToLocal(); // حفظ محلي
     recordChange('أُضيفت محاضرة جديدة: ' + lec.title); 
     renderAdminLectures(); 
     renderAll(); 
-    sendNotification(); 
+    sendNotification();  // إرسال إشعار تلقائي عند الإضافة
     alert('تم الإضافة وحفظها محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.'); 
   }; 
   const list=document.createElement('div'); 
@@ -798,19 +1076,21 @@ function renderAdminLectures(){
       ul.appendChild(el); 
     }); 
     list.appendChild(ul); 
+    // delete buttons
     list.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', ()=>{ 
       const id=b.getAttribute('data-id'); 
       if(confirm('حذف المحاضرة؟')){ 
         const lecTitle = DATA.lectures.find(x=>x.id===id)?.title || 'غير معروف'; 
         DATA.lectures = DATA.lectures.filter(x=> x.id !== id); 
-        saveDataToLocal(); 
+        saveDataToLocal(); // حفظ محلي
         renderAdminLectures(); 
         renderAll(); 
         recordChange('حُذفت محاضرة: ' + lecTitle); 
-        sendNotification(); 
+        sendNotification();  // إرسال إشعار تلقائي
         alert('تم الحذف وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.'); 
       } 
     })); 
+    // edit buttons
     list.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{ 
       const id=b.getAttribute('data-edit'); 
       const lec = DATA.lectures.find(x=>x.id===id); 
@@ -826,7 +1106,8 @@ function renderAdminInstructors(){
   body.innerHTML='<div style="margin-bottom:12px"><h4>إضافة دكتور جديد</h4></div>'; 
   const form=document.createElement('form'); 
   form.innerHTML='<div class="row"><div class="col"><input id="iName" class="input" placeholder="اسم الدكتور" required /></div><div class="col"><input id="iTitle" class="input" placeholder="التخصص/المسمى" /></div></div><input id="iSubjects" class="input" placeholder="المواد (افصل بفاصلة)" /><textarea id="iBio" class="input" placeholder="نبذة عن الدكتور"></textarea><div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn" type="submit">أضف الدكتور</button></div>'; 
-  body.appendChild  form.onsubmit=(e)=>{ 
+  body.appendChild(form); 
+  form.onsubmit=(e)=>{ 
     e.preventDefault(); 
     const inst={ 
       id: uid(), 
@@ -837,11 +1118,11 @@ function renderAdminInstructors(){
     }; 
     if(!inst.name){ alert('اسم الدكتور مطلوب'); return; } 
     DATA.instructors.push(inst); 
-    saveDataToLocal(); 
+    saveDataToLocal(); // حفظ محلي
     recordChange('أُضيف دكتور جديد: ' + inst.name); 
     renderAdminInstructors(); 
     renderAll(); 
-    sendNotification(); 
+    sendNotification();  // إرسال إشعار تلقائي
     alert('تم الإضافة وحفظها محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.'); 
   }; 
   const list=document.createElement('div'); 
@@ -859,23 +1140,26 @@ function renderAdminInstructors(){
       ul.appendChild(el); 
     }); 
     list.appendChild(ul); 
+    // delete buttons
     list.querySelectorAll('button[data-id]').forEach(b=> b.addEventListener('click', ()=>{ 
       const id=b.getAttribute('data-id'); 
       if(confirm('حذف الدكتور؟')){ 
         const instName = DATA.instructors.find(x=>x.id===id)?.name || ''; 
         DATA.instructors = DATA.instructors.filter(x=> x.id!==id); 
-        saveDataToLocal(); 
+        saveDataToLocal(); // حفظ محلي
         renderAdminInstructors(); 
         renderAll(); 
         recordChange('حُذف الدكتور: ' + instName); 
-        sendNotification(); 
+        sendNotification();  // إرسال إشعار تلقائي
         alert('تم الحذف وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.'); 
       } 
     })); 
+    // edit buttons (بسيطة – يمكن توسيعها لاحقًا)
     list.querySelectorAll('button[data-edit]').forEach(b=> b.addEventListener('click', ()=>{ 
       const id=b.getAttribute('data-edit'); 
       const inst = DATA.instructors.find(x=>x.id===id); 
       if(inst) {
+        // modal بسيط للتعديل (يمكن تحسينه)
         const newName = prompt('اسم الدكتور الجديد:', inst.name);
         if (newName && newName.trim() !== inst.name) {
           inst.name = newName.trim();
@@ -909,7 +1193,7 @@ function renderAdminImportExport(){
   const generateCodeBtn=document.createElement('button'); 
   generateCodeBtn.className='btn'; 
   generateCodeBtn.style.marginRight='8px'; 
-  generateCodeBtn.innerText='إنشاء كود GitHub'; 
+    generateCodeBtn.innerText='إنشاء كود GitHub'; 
   generateCodeBtn.onclick=()=>{ 
     const code = `let DATA = {
   lectures: ${JSON.stringify(DATA.lectures, null, 2)},
@@ -919,6 +1203,7 @@ function renderAdminImportExport(){
     navigator.clipboard.writeText(code).then(() => {
       alert('تم نسخ كود DATA الجاهز! لصقه في ملف HTML تحت /* بيانات افتراضية ثابتة */، ثم ارفع على GitHub ليظهر للجميع.');
     }).catch(() => {
+      // fallback إذا مش بيشتغل clipboard
       const ta = document.createElement('textarea');
       ta.value = code;
       document.body.appendChild(ta);
@@ -945,10 +1230,10 @@ function renderAdminImportExport(){
           const newData = JSON.parse(reader.result); 
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
-            saveDataToLocal(); 
+            saveDataToLocal(); // حفظ محلي
             renderAll(); 
-            sendNotification(); 
-            alert('تم الاستيراد وحفظه محليًا وإرسال إشعار. للـ sharing، استخدم إنشاء كود GitHub.'); 
+            sendNotification();  // إرسال إشعار بعد الاستيراد
+            alert('تم الاستيراد وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم إنشاء كود GitHub.'); 
           } else { 
             alert('الملف غير صحيح'); 
           } 
@@ -968,10 +1253,10 @@ function renderAdminImportExport(){
   clearBtn.onclick=()=>{ 
     if(confirm('هل أنت متأكد؟ سيتم مسح كل المحاضرات والدكاترة!')){ 
       DATA = {lectures:[], instructors:[], changes:[]}; 
-      saveDataToLocal(); 
+      saveDataToLocal(); // حفظ محلي
       renderAll(); 
       recordChange('تم مسح كل البيانات'); 
-      sendNotification(); 
+      sendNotification();  // إرسال إشعار تلقائي
       alert('تم المسح وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم إنشاء كود GitHub.'); 
     } 
   }; 
@@ -981,6 +1266,7 @@ function renderAdminImportExport(){
   body.appendChild(clearBtn); 
 }
 
+/* Edit Modal (مصححة مع إصلاح endMinuteOptions) */
 function openEditModal(lec){
   const root=document.getElementById('modalRoot'); 
   if(!root) return; 
@@ -993,6 +1279,7 @@ function openEditModal(lec){
   const minuteOptions='<option '+( (lec.startMin||0)===0 ? 'selected' : '' )+' value="0">00</option><option '+( (lec.startMin||0)===30 ? 'selected' : '' )+' value="30">30</option>';
   m.innerHTML = '<h3>تعديل المحاضرة</h3>';
   m.innerHTML += '<div class="row"><div class="col"><label class="kv">اليوم</label><select id="eDay" class="input">'+DAYS.map(d=>'<option '+(d===lec.day?'selected':'')+' value="'+d+'">'+d+'</option>').join('')+'</select></div><div class="col"><label class="kv">بداية (ساعة/دقيقة)</label><div class="row"><select id="eStartH" class="input">'+hourOptions+'</select><select id="eStartM" class="input">'+minuteOptions+'</select></div></div></div>';
+  // إصلاح: endMinuteOptions صحيحة الآن
   const endMinuteOptions='<option '+( (lec.endMin||0)===0 ? 'selected' : '' )+' value="0">00</option><option '+( (lec.endMin||0)===30 ? 'selected' : '' )+' value="30">30</option>';
   const endHourOptions=HOURS.map(h=>'<option '+(h===lec.endHour?'selected':'')+' value="'+h+'">'+to12(h)+'</option>').join('');
   m.innerHTML += '<div class="row" style="margin-top:8px"><div class="col"><label class="kv">نهاية (ساعة/دقيقة)</label><div class="row"><select id="eEndH" class="input">'+endHourOptions+'</select><select id="eEndM" class="input">'+endMinuteOptions+'</select></div></div><div class="col"><label class="kv">المادة</label><input id="eTitle" class="input" value="'+escapeHtml(lec.title||'')+'" /></div></div>'; 
@@ -1034,10 +1321,10 @@ function openEditModal(lec){
       DATA.lectures[idx].instructorId = inst;
       DATA.lectures[idx].location = loc;
       DATA.lectures[idx].notes = notes;
-      saveDataToLocal(); 
+      saveDataToLocal(); // حفظ محلي
       recordChange('تم تعديل المحاضرة: ' + title);
       renderAll();
-      sendNotification(); 
+      sendNotification();  // إرسال إشعار تلقائي عند التعديل
       alert('تم التعديل وحفظه محليًا وإرسال إشعار. للنشر للجميع، استخدم تصدير كود GitHub.');
     }
     root.style.display='none'; 
@@ -1045,13 +1332,14 @@ function openEditModal(lec){
   };
 }
 
+/* Change log (محفوظ محليًا) */
 function recordChange(msg){
   try{
     const now = new Date();
     DATA.changes = DATA.changes || [];
     DATA.changes.unshift({ts: now.toISOString(), msg: msg});
     if(DATA.changes.length>300) DATA.changes.length = 300;
-    saveDataToLocal(); 
+    saveDataToLocal(); // حفظ محلي
     renderChangeLog();
   }catch(e){ console.error('recordChange error:', e); }
 }
@@ -1092,11 +1380,14 @@ function renderChangeLog(){
 }
 
 function updateAdminVisibility(){
+  // إخفاء/إظهار أزرار الإدارة (محسنة لتشمل .admin-only)
   const adminElements = document.querySelectorAll('.admin-only');
   adminElements.forEach(el => el.style.display = window.isAdmin ? 'inline-block' : 'none');
 }
 
+/* Export/Import/Print handlers (مع التركيز على النسخ الاحتياطي + تكامل الإشعار) */
 function initHandlers(){
+  // Export (للنسخ الاحتياطي لتعديل الكود)
   const exportBtn = document.getElementById('exportBtn');
   if(exportBtn) exportBtn.addEventListener('click', ()=>{ 
     const a=document.createElement('a'); 
@@ -1107,6 +1398,7 @@ function initHandlers(){
     alert('استخدم هذا الملف للاستيراد أو تعديل DATA في الكود، ثم ارفع على GitHub للـ sharing.'); 
   });
 
+  // Import (محلي)
   const importBtn = document.getElementById('importBtn');
   if(importBtn) importBtn.addEventListener('click', ()=>{ 
     const inp=document.createElement('input'); 
@@ -1121,9 +1413,9 @@ function initHandlers(){
           const newData = JSON.parse(reader.result); 
           if(newData.lectures && newData.instructors){ 
             DATA = newData; 
-            saveDataToLocal(); 
+            saveDataToLocal(); // حفظ محلي
             renderAll(); 
-            sendNotification(); 
+            sendNotification();  // إرسال إشعار بعد الاستيراد
             alert('تم الاستيراد وحفظه محليًا وإرسال إشعار. للـ sharing، استخدم لوحة الإدارة > استيراد/تصدير > إنشاء كود GitHub.'); 
           } else { 
             alert('الملف غير صحيح'); 
@@ -1137,17 +1429,18 @@ function initHandlers(){
     inp.click(); 
   });
 
+  // Print (مع styles محسنة)
   const printBtn = document.getElementById('printBtn');
   if(printBtn) printBtn.addEventListener('click', ()=>{ 
     const w=window.open('','_blank'); 
     const printStyles = `
-            body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; padding: 16px; }
+      body { font-family: 'Cairo', Arial, sans-serif; direction: rtl; padding: 16px; }
       table { width: 100%; border-collapse: collapse; }
       th, td { border: 1px solid #ccc; padding: 6px; text-align: center; }
       th { background: #f0f0f0; }
       .slot { padding: 4px; border-radius: 4px; margin: 2px; }
       .current { outline: 2px solid #7c3aed; }
-      .live-countdown { font-weight: bold; color: #dc3545; }
+      .live-countdown { font-weight: bold; color: #dc3545; }  /* ستايل للعداد في الطباعة */
     `;
     w.document.open(); 
     w.document.write('<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"/><title>جدول المحاضرات</title><style>'+printStyles+'</style><link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap" rel="stylesheet"></head><body><h2>جدول المحاضرات</h2>'+document.getElementById('tableContainer').innerHTML+'<p style="margin-top:20px">تصميم وبرمجة: Khaled El-Reweni 💻</p></body></html>'); 
@@ -1155,9 +1448,11 @@ function initHandlers(){
     setTimeout(()=>{ w.print(); }, 500); 
   });
 
+  // Admin (مع أمان)
   const adminBtn = document.getElementById('adminBtn');
   if(adminBtn) adminBtn.addEventListener('click', openAdminFlow);
 
+  // Theme toggle (محلي لكل مستخدم)
   const themeToggle = document.getElementById('themeToggle');
   if(themeToggle) themeToggle.addEventListener('click', ()=>{ 
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
@@ -1166,10 +1461,12 @@ function initHandlers(){
     saveTheme(newTheme);
   });
 
+  // Load theme
   const savedTheme = loadTheme();
   if(savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
 }
 
+/* Tab switching */
 function initTabs(){
   document.querySelectorAll('.tab-btn').forEach(b=> b.addEventListener('click', ()=>{ 
     document.querySelectorAll('.tab-btn').forEach(x=>x.classList.remove('active')); 
@@ -1188,69 +1485,80 @@ function renderAll(){
   renderLiveNotice();
   renderChangeLog();
   updateAdminVisibility();
+  // إصلاح: بدء تحديث العداد في الهيدر (كل دقيقة) – الشرط صحيح الآن
   if (typeof noticeInterval === 'undefined') {
     noticeInterval = setInterval(() => {
-      renderLiveNotice();
-    }, 60000);
+      renderLiveNotice();  // تحديث الإشعار العام فقط
+    }, 60000);  // كل دقيقة
   }
 }
 
+// Initialization
 document.addEventListener('DOMContentLoaded', async () => {
   loadDataFromLocal();
   initHandlers();
   initTabs();
   renderAll();
   
+     // تحقق من Webpushr بعد التحميل الكامل مع تأخير
   setTimeout(() => {
     if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
       console.log('Webpushr محمل بشكل صحيح!');
       if (Notification.permission === 'granted') {
-        requestPermission();
+        requestPermission();  // تحديث تلقائي
       }
     } else {
-      console.error('Webpushr مش جاهز!');
+      console.error('Webpushr غير محمل!');
       alert('⚠️ Webpushr لم يتم تحميله بشكل صحيح. تأكد من الاتصال بالإنترنت.');
     }
+    // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
     if (Notification.permission === 'granted') {
-      requestPermission();
+      requestPermission();  // تحديث الاشتراك تلقائيًا
     }
-  }, 2000);
+  }, 2000);  // تأخير 2 ثانية عشان webpushr يتحمل
+  // للعداد الدقيق (ثواني) في upcoming lectures، حدث كل ثانية
   if (typeof countdownInterval === 'undefined') {
     countdownInterval = setInterval(() => {
       const noticeEl = document.getElementById('liveNotice');
       if (noticeEl && noticeEl.classList.contains('live-countdown')) {
-        renderLiveNotice();
+        renderLiveNotice();  // إعادة رسم العداد الدقيق
       }
-    }, 1000);
+    }, 1000);  // كل ثانية للدقة في الثواني
   }
+  // تحقق تلقائي من الإشعارات عند التحميل (إذا كان permission granted)
   if (Notification.permission === 'granted') {
-    requestPermission();
+    requestPermission();  // تحديث الـ token تلقائيًا
   }
 });
 
+// تنظيف الـ intervals عند إغلاق الصفحة (اختياري للأداء)
 window.addEventListener('beforeunload', () => {
   if (typeof noticeInterval !== 'undefined') clearInterval(noticeInterval);
   if (typeof countdownInterval !== 'undefined') clearInterval(countdownInterval);
 });
 </script>
-<script>
-setTimeout(() => {
-  if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
-    webpushr.push(['ready', function() {
-      console.log("✅ Webpushr جاهز");
+  <script>
+  // تأكد إن Webpushr تم تحميله مع فحص
+  setTimeout(() => {
+    if (typeof webpushr !== 'undefined' && typeof webpushr.push === 'function') {
+      webpushr.push(['ready', function() {
+        console.log("✅ Webpushr جاهز");
 
-      document.getElementById("subscribeBtn").addEventListener("click", () => {
-        webpushr.push(['subscribe']);
-        document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
-      });
-    }]);
-  } else {
-    console.error("Webpushr مش جاهز!");
-  }
-}, 2000);
+        // عند الضغط على الزر، يظهر نافذة تفعيل الإشعارات
+        document.getElementById("subscribeBtn").addEventListener("click", () => {
+          webpushr.push(['subscribe']);
+          document.getElementById("status").textContent = "✅ تم تفعيل الإشعارات بنجاح!";
+        });
+      }]);
+    } else {
+      console.error("Webpushr مش جاهز!");
+    }
+  }, 2000);  // تأخير 2 ثانية
 </script>
+  <!-- start webpushr tracking code --> 
 <script>(function(w,d, s, id) {if(typeof(w.webpushr)!=='undefined') return;w.webpushr=w.webpushr||function(){(w.webpushr.q=w.webpushr.q||[]).push(arguments)};var js, fjs = d.getElementsByTagName(s)[0];js = d.createElement(s); js.id = id;js.async=1;js.src = "https://cdn.webpushr.com/app.min.js";
 fjs.parentNode.appendChild(js);}(window,document, 'script', 'webpushr-jssdk'));
 webpushr('setup',{'key':'BNtU2QB-waQ02FamPM-029FUMI_djfheBK4MfJrDczLSTbl67G7RlHALYgT5TbZ7Wlx5uaWKyRYBu-vpp66xvcg' });</script>
+<!-- end webpushr tracking code -->
 </body>
 </html>
